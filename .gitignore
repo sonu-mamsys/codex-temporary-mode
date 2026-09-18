@@ -11,3 +11,4 @@ dist/
 .npmrc
 .codex/
 *.log
+build/

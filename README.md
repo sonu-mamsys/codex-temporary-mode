@@ -1,101 +1,78 @@
 # GhostThread — Temporary Mode for Codex
 
-Temporary chats for Codex in your terminal and VS Code.
+Keep one-off Codex conversations out of your saved chat history.
 
-Use GhostThread when you want a conversation that stays out of saved chat history. In VS Code, a **Temporary** switch and purple input background make the mode easy to recognise.
+Use temporary chats in your terminal, or turn on **Temporary** in VS Code. A purple chat input helps you recognise when it is on.
 
 Unofficial project. Not affiliated with or endorsed by OpenAI.
 
-## Before you start
+## What you need
 
 - Node.js 22 or newer.
-- Codex installed and signed in. Run `codex login` if needed.
+- Codex installed and signed in.
 - For VS Code: Codex extension **26.908.40401**. Other versions are not supported yet.
 
 ## Install
 
-For a published npm release:
+Once the npm release is available:
 
-```powershell
+```sh
 npm install -g ghostthread
 ```
 
-If you have the project files and local release package, use:
+On Windows, use `npm.cmd` if PowerShell blocks `npm`.
 
-```powershell
-npm install -g .\dist\ghostthread-3.2.1.tgz
-```
+## Temporary chats in VS Code
 
-On Windows, use `npm.cmd` instead of `npm` if PowerShell blocks the command.
+1. Run:
 
-## Use in the terminal
-
-Start a temporary chat:
-
-```powershell
-ghostthread
-```
-
-By default, GhostThread cannot edit your project files. To allow changes, run:
-
-```powershell
-ghostthread --workspace-write
-```
-
-| Command | What it does |
-| --- | --- |
-| `/new` | Start a fresh temporary chat |
-| `/status` | Show the current chat's temporary status |
-| `/exit` | Close the chat |
-
-Run `ghostthread --help` for more options.
-
-## Use in VS Code
-
-1. Enable GhostThread for the supported extension:
-
-   ```powershell
+   ```sh
    ghostthread vscode install
    ```
 
 2. Reload VS Code.
-3. Open a new Codex chat and turn on **Temporary**.
+3. Start a new Codex chat and turn on **Temporary**.
 
-Temporary chats have a purple input background and a **Temporary chat** label. The switch applies to new chats; it does not change existing conversations.
+Look for the purple input and **Temporary chat** label. Existing conversations keep their original mode.
 
-If you switch modes using the VS Code status bar or Command Palette, reload the window before starting a new chat.
+To check it works, send a message in a new temporary chat and restart VS Code. The chat should no longer appear in history.
 
-## Check that it works
+If you change the mode from the status bar or Command Palette, reload VS Code before starting your next chat.
 
-In the terminal:
+## Temporary chats in your terminal
 
-```powershell
-ghostthread --verify "Reply only TEMP-TEST. Do not use tools."
+```sh
+ghostthread
 ```
 
-You should see the reply followed by **PASS**. This checks that the test chat cannot be reopened after the session closes and has no matching local session files.
+Type your message to begin. Use `/new` for a fresh chat and `/exit` to leave.
 
-In VS Code, create a new temporary chat, send a message, then restart VS Code. That chat should not appear in history.
+Chats are read-only by default. To let Codex edit files in your project:
 
-## What to know
+```sh
+ghostthread --workspace-write
+```
 
-- Temporary chats are not saved for later resuming. File edits still remain.
-- This does not guarantee zero retention by OpenAI or remove terminal scrollback.
-- The terminal provides basic text chat. Features such as attachments and interactive approval prompts are not supported.
-- VS Code support covers local chats. Cloud chats, remote connections, ChatGPT desktop and ChatGPT web are not supported.
-- A Codex extension update may require a new GhostThread release.
+For more options, run `ghostthread --help`.
 
-## Remove GhostThread
+## Good to know
 
-If you enabled it in VS Code, restore the extension first:
+- Temporary chats cannot be reopened later. Any file changes still remain.
+- Temporary mode does not guarantee zero retention by OpenAI or clear text already shown in your terminal.
+- Terminal mode supports text chat, without attachments or interactive approval prompts.
+- VS Code support is for local chats only. Cloud chats, remote connections and ChatGPT desktop/web are not supported.
+- If the Codex extension updates, you may need a new GhostThread release.
 
-```powershell
+## Uninstall
+
+If you enabled GhostThread in VS Code, restore it first:
+
+```sh
 ghostthread vscode restore
 npm uninstall -g ghostthread
 ```
 
-Reload VS Code afterward.
-
+Reload VS Code afterward. If you only used the terminal, just run the uninstall command.
 
 ## License
 

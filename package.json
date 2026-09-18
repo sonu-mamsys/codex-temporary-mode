@@ -1,6 +1,6 @@
 {
   "name": "ghostthread",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "private": false,
   "type": "module",
   "description": "GhostThread — Temporary Mode for Codex",
@@ -9,25 +9,23 @@
     "patch:vscode": "node patch.mjs --vscode",
     "restore:vscode": "node patch.mjs --uninstall --vscode",
     "pack:check": "npm pack --dry-run",
-    "prepublishOnly": "node --test"
+    "prepublishOnly": "npm test && npm run test:build",
+    "build": "node scripts/build.mjs",
+    "prepack": "npm run build",
+    "test:build": "npm run build && node scripts/verify-build.mjs"
   },
   "license": "MIT",
   "bin": {
-    "ghostthread": "./ghostthread.mjs",
-    "temp-codex": "./temp-codex.mjs"
+    "ghostthread": "./build/ghostthread.mjs",
+    "temp-codex": "./build/temp-codex.mjs"
   },
   "engines": {
     "node": ">=22"
   },
   "files": [
-    "ghostthread.mjs",
-    "temp-codex.mjs",
-    "patch.mjs",
-    "lib/",
-    "src/inject/",
+    "build/",
     "README.md",
-    "LICENSE",
-    "CHANGELOG.md"
+    "LICENSE"
   ],
   "keywords": [
     "codex",
@@ -37,5 +35,8 @@
   ],
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }

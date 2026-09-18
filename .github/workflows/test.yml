@@ -16,4 +16,5 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm test
+      - run: npm run test:build
       - run: npm pack --dry-run

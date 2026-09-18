@@ -1,5 +1,10 @@
 # GhostThread changelog
 
+## 3.2.2
+
+- Publish minified build files instead of the original project source.
+- Simplified the README for installation and everyday use.
+
 ## 3.2.1
 
 - Renamed the project to **GhostThread — Temporary Mode for Codex**.
