@@ -21,8 +21,7 @@ npm i -g codex-temporary-mode
 ```
 
 On Windows, use `npm.cmd` if PowerShell blocks `npm`.
-The installer asks whether to patch the supported VS Code Codex extension. When
-you accept, reload VS Code once; the patch completes its clean reload itself.
+The installer asks whether to add Temporary Mode to the supported VS Code Codex extension. When you accept, reload VS Code once. No second reload is required.
 
 ## Temporary chats in VS Code
 
@@ -59,8 +58,7 @@ For more options, run `codex-temporary-mode --help`.
 ## Good to know
 
 - Temporary chats cannot be reopened later. Any file changes still remain.
-- Queued follow-up messages in a temporary chat are held only until the current
-  VS Code window closes or reloads.
+- Queued follow-up messages in a temporary chat are held only until the current VS Code window closes or reloads.
 - Temporary mode does not guarantee zero retention by OpenAI or clear text already shown in your terminal.
 - Terminal mode supports text chat, without attachments or interactive approval prompts.
 - VS Code support is for local chats only. Cloud chats, remote connections and ChatGPT desktop/web are not supported.
@@ -74,7 +72,7 @@ Run this from your project folder:
 codex-temporary-mode uninstall
 ```
 
-This restores detected VS Code installations, removes the saved Temporary setting, and uninstalls the terminal package from your active npm installation. Reload VS Code and close any running temporary chats afterward.
+This restores detected VS Code installations, removes the saved Temporary setting, and uninstalls the terminal package from your active npm installation. Reload VS Code once and close any running temporary chats afterward.
 
 Using a source checkout? Run `bash uninstall.sh` or `.\uninstall.ps1` instead. Run it again safely if already uninstalled.
 

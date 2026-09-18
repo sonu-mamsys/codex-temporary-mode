@@ -1,8 +1,5 @@
 ﻿'use strict';
 
-const fs = require('fs');
-const path = require('path');
-
 // Structured requests are handled before native or WSL serialization.
 // No child_process monkey-patching or assumptions about stream chunks.
 const connections = new WeakMap();
@@ -33,11 +30,7 @@ function before(connection, provider, uiProvider, id, method, params, prewarm) {
     connection.providers.get(provider)?.onResult?.({ id, result: value });
     return { blocked: true };
   };
-  if (current.visible.has(params?.threadId) && method === 'thread/queue/list') {
-    // The Codex server does not persist a queue for ephemeral threads. Keep its
-    // equivalent queue in this extension host instead, for this window only.
-    return result({ data: queue(params.threadId), nextCursor: null });
-  }
+  if (current.visible.has(params?.threadId) && method === 'thread/queue/list') return result({ data: queue(params.threadId), nextCursor: null });
   if (current.visible.has(params?.threadId) && method === 'thread/queue/add') {
     const submission = { id: `temp-codex-queue-${++current.nextQueueId}`, input: params.input, clientUserMessageId: params.clientUserMessageId };
     queue(params.threadId).push(submission);
@@ -71,8 +64,6 @@ function before(connection, provider, uiProvider, id, method, params, prewarm) {
     const index = entries.findIndex(entry => entry.id === params.queuedSubmissionId);
     if (index === -1) return result({ error: { code: -32600, message: 'Queued temporary message was not found.' } });
     const [submission] = entries.splice(index, 1);
-    // Send the stored input as a normal ephemeral turn. It never reaches the
-    // server's persisted queue and is discarded with this extension window.
     return { method: 'turn/start', params: { threadId: params.threadId, input: submission.input } };
   }
   if (method === 'turn/start' && current.prewarmed.has(params?.threadId)) {
@@ -119,15 +110,6 @@ globalThis.__TEMP_CODEX_V3__ = api;
 
 queueMicrotask(() => {
   const vscode = require('vscode');
-  const reloadMarker = path.join(__dirname, '..', '.temp-codex-reload-once');
-  if (fs.existsSync(reloadMarker)) {
-    // File-watcher notifications can arrive after the user's first reload. Remove
-    // the marker before requesting one clean reload, so this can never loop.
-    try {
-      fs.unlinkSync(reloadMarker);
-      void vscode.commands.executeCommand('workbench.action.reloadWindow');
-    } catch { /* A manual reload remains safe if VS Code cannot run the command. */ }
-  }
   const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 95);
   item.command = 'chatgpt.tempCodex.toggle';
   item.name = 'Codex Temporary Chats';
