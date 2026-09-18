@@ -1,4 +1,4 @@
-# GhostThread — Temporary Mode for Codex
+# codex-temporary-mode
 
 Keep one-off Codex conversations out of your saved chat history.
 
@@ -17,7 +17,7 @@ Unofficial project. Not affiliated with or endorsed by OpenAI.
 Once the npm release is available:
 
 ```sh
-npm install -g ghostthread
+npm install -g codex-temporary-mode
 ```
 
 On Windows, use `npm.cmd` if PowerShell blocks `npm`.
@@ -27,7 +27,7 @@ On Windows, use `npm.cmd` if PowerShell blocks `npm`.
 1. Run:
 
    ```sh
-   ghostthread vscode install
+   codex-temporary-mode vscode install
    ```
 
 2. Reload VS Code.
@@ -42,7 +42,7 @@ If you change the mode from the status bar or Command Palette, reload VS Code be
 ## Temporary chats in your terminal
 
 ```sh
-ghostthread
+codex-temporary-mode
 ```
 
 Type your message to begin. Use `/new` for a fresh chat and `/exit` to leave.
@@ -50,10 +50,10 @@ Type your message to begin. Use `/new` for a fresh chat and `/exit` to leave.
 Chats are read-only by default. To let Codex edit files in your project:
 
 ```sh
-ghostthread --workspace-write
+codex-temporary-mode --workspace-write
 ```
 
-For more options, run `ghostthread --help`.
+For more options, run `codex-temporary-mode --help`.
 
 ## Good to know
 
@@ -61,15 +61,15 @@ For more options, run `ghostthread --help`.
 - Temporary mode does not guarantee zero retention by OpenAI or clear text already shown in your terminal.
 - Terminal mode supports text chat, without attachments or interactive approval prompts.
 - VS Code support is for local chats only. Cloud chats, remote connections and ChatGPT desktop/web are not supported.
-- If the Codex extension updates, you may need a new GhostThread release.
+- If the Codex extension updates, you may need a new codex-temporary-mode release.
 
 ## Uninstall
 
-If you enabled GhostThread in VS Code, restore it first:
+If you enabled codex-temporary-mode in VS Code, restore it first:
 
 ```sh
-ghostthread vscode restore
-npm uninstall -g ghostthread
+codex-temporary-mode vscode restore
+npm uninstall -g codex-temporary-mode
 ```
 
 Reload VS Code afterward. If you only used the terminal, just run the uninstall command.

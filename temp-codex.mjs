@@ -1,3 +1,3 @@
 #!/usr/bin/env node
 // Compatibility entry point for existing installations.
-import './ghostthread.mjs';
+import './codex-temporary-mode.mjs';

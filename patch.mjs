@@ -16,8 +16,8 @@ function valueAfter(flag) {
   return i >= 0 ? args[i + 1] : undefined;
 }
 
-function log(message) { console.log(`[ghostthread] ${message}`); }
-function fail(message) { console.error(`[ghostthread] ${message}`); process.exitCode = 1; }
+function log(message) { console.log(`[codex-temporary-mode] ${message}`); }
+function fail(message) { console.error(`[codex-temporary-mode] ${message}`); process.exitCode = 1; }
 
 function newest(paths) {
   return paths

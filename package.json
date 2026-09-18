@@ -1,9 +1,9 @@
 {
-  "name": "ghostthread",
+  "name": "codex-temporary-mode",
   "version": "3.2.2",
   "private": false,
   "type": "module",
-  "description": "GhostThread — Temporary Mode for Codex",
+  "description": "Temporary chats for Codex in VS Code and the terminal",
   "scripts": {
     "test": "node --test",
     "patch:vscode": "node patch.mjs --vscode",
@@ -16,7 +16,7 @@
   },
   "license": "MIT",
   "bin": {
-    "ghostthread": "./build/ghostthread.mjs",
+    "codex-temporary-mode": "./build/codex-temporary-mode.mjs",
     "temp-codex": "./build/temp-codex.mjs"
   },
   "engines": {

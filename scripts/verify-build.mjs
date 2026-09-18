@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const parent = fs.realpathSync(os.tmpdir());
-const stage = fs.mkdtempSync(path.join(parent, 'ghostthread-build-'));
+const stage = fs.mkdtempSync(path.join(parent, 'codex-temporary-mode-build-'));
 try {
   fs.cpSync(path.join(root, 'build'), stage, { recursive: true });
   for (const dir of ['test', 'fixtures']) fs.cpSync(path.join(root, dir), path.join(stage, dir), { recursive: true });
@@ -18,6 +18,6 @@ try {
   if (result.error) throw result.error;
   process.exitCode = result.status ?? 1;
 } finally {
-  if (fs.realpathSync(stage) !== stage || path.dirname(stage) !== parent || !path.basename(stage).startsWith('ghostthread-build-')) throw new Error('Unsafe test cleanup path');
+  if (fs.realpathSync(stage) !== stage || path.dirname(stage) !== parent || !path.basename(stage).startsWith('codex-temporary-mode-build-')) throw new Error('Unsafe test cleanup path');
   fs.rmSync(stage, { recursive: true });
 }

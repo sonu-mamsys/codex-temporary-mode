@@ -1,6 +1,8 @@
-# GhostThread changelog
+# codex-temporary-mode changelog
 
 ## 3.2.2
+
+- Renamed the package and primary command to `codex-temporary-mode`; the `temp-codex` alias remains available.
 
 - Publish minified build files instead of the original project source.
 - Simplified the README for installation and everyday use.
