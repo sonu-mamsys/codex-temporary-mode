@@ -1,0 +1,41 @@
+{
+  "name": "ghostthread",
+  "version": "3.2.1",
+  "private": false,
+  "type": "module",
+  "description": "GhostThread — Temporary Mode for Codex",
+  "scripts": {
+    "test": "node --test",
+    "patch:vscode": "node patch.mjs --vscode",
+    "restore:vscode": "node patch.mjs --uninstall --vscode",
+    "pack:check": "npm pack --dry-run",
+    "prepublishOnly": "node --test"
+  },
+  "license": "MIT",
+  "bin": {
+    "ghostthread": "./ghostthread.mjs",
+    "temp-codex": "./temp-codex.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "ghostthread.mjs",
+    "temp-codex.mjs",
+    "patch.mjs",
+    "lib/",
+    "src/inject/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "codex",
+    "temporary-chat",
+    "cli",
+    "vscode"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

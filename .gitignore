@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.npm-cache/
+.package-smoke/
+.temp-codex-review-*/
+*.tgz
+*.temp-codex.bak
+.temp-codex-v3.json
+.env
+.env.*
+.npmrc
+.codex/
+*.log

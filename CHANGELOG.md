@@ -1,0 +1,29 @@
+# GhostThread changelog
+
+## 3.2.1
+
+- Renamed the project to **GhostThread — Temporary Mode for Codex**.
+- Added `ghostthread` as the main command; `temp-codex` still works.
+- Kept compatibility with existing VS Code installations.
+- Simplified installation, usage and publishing documentation.
+
+## 3.2.0
+
+- Added temporary chats in the terminal.
+- Added a verification command to check that a chat is not saved.
+- Improved handling of errors, timeouts and closed sessions.
+- Made terminal chats read-only by default, with an option to allow file edits.
+- Added npm packaging and the MIT license.
+
+## 3.1.0
+
+- Added the Temporary switch in VS Code.
+- Added a purple background to distinguish temporary chats.
+- Improved switching between normal and temporary mode.
+
+## 3.0.1
+
+- Fixed temporary chats appearing in VS Code history.
+- Added checks for supported extension versions and safer restoration.
+- Removed desktop support.
+- Made VS Code changes an explicit installation step.
