@@ -6,7 +6,7 @@ const root = new URL('../', import.meta.url);
 const output = new URL('build/', root);
 // This fixed directory contains generated files only.
 await fs.rm(output, { recursive: true, force: true });
-const files = ['codex-temporary-mode.mjs', 'temp-codex.mjs', 'patch.mjs', 'uninstall.mjs',
+const files = ['codex-temporary-mode.mjs', 'temp-codex.mjs', 'patch.mjs', 'postinstall.mjs', 'uninstall.mjs',
   'lib/app-server.mjs', 'lib/terminal.mjs', 'lib/installers.mjs', 'lib/vscode-adapter.mjs',
   'src/inject/composer-ui.js', 'src/inject/vscode-inject.cjs'];
 for (const file of files) {
@@ -21,7 +21,7 @@ for (const file of files) {
   await fs.mkdir(new URL('./', destination), { recursive: true });
   await fs.writeFile(destination, code);
 }
-for (const file of ['codex-temporary-mode.mjs', 'temp-codex.mjs', 'patch.mjs']) {
+for (const file of ['codex-temporary-mode.mjs', 'temp-codex.mjs', 'patch.mjs', 'postinstall.mjs']) {
   await fs.chmod(new URL(file, output), 0o755);
 }
 console.log('Built minified release files (no source maps).');

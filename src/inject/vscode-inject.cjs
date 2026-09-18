@@ -1,10 +1,13 @@
 ﻿'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 // Structured requests are handled before native or WSL serialization.
 // No child_process monkey-patching or assumptions about stream chunks.
 const connections = new WeakMap();
 function state(connection) {
-  if (!connections.has(connection)) connections.set(connection, { pending: new Map(), visible: new Set(), prewarmed: new Map() });
+  if (!connections.has(connection)) connections.set(connection, { pending: new Map(), visible: new Set(), prewarmed: new Map(), queues: new Map(), nextQueueId: 0 });
   return connections.get(connection);
 }
 function enabled() {
@@ -22,11 +25,55 @@ async function setEnabled(value) {
 function before(connection, provider, uiProvider, id, method, params, prewarm) {
   if (provider !== uiProvider) return { params };
   const current = state(connection);
-  if (current.visible.has(params?.threadId) && method === 'thread/queue/list') {
-    // Ephemeral threads have no persisted submission queue. Reads are empty;
-    // queue writes continue to receive the server's explicit unsupported error.
-    connection.providers.get(provider)?.onResult?.({ id, result: { data: [], nextCursor: null } });
+  const queue = threadId => {
+    if (!current.queues.has(threadId)) current.queues.set(threadId, []);
+    return current.queues.get(threadId);
+  };
+  const result = value => {
+    connection.providers.get(provider)?.onResult?.({ id, result: value });
     return { blocked: true };
+  };
+  if (current.visible.has(params?.threadId) && method === 'thread/queue/list') {
+    // The Codex server does not persist a queue for ephemeral threads. Keep its
+    // equivalent queue in this extension host instead, for this window only.
+    return result({ data: queue(params.threadId), nextCursor: null });
+  }
+  if (current.visible.has(params?.threadId) && method === 'thread/queue/add') {
+    const submission = { id: `temp-codex-queue-${++current.nextQueueId}`, input: params.input, clientUserMessageId: params.clientUserMessageId };
+    queue(params.threadId).push(submission);
+    return result({ queuedSubmission: submission });
+  }
+  if (current.visible.has(params?.threadId) && method === 'thread/queue/update') {
+    const submission = queue(params.threadId).find(entry => entry.id === params.queuedSubmissionId);
+    if (!submission) return result({ error: { code: -32600, message: 'Queued temporary message was not found.' } });
+    submission.input = params.input;
+    return result({ queuedSubmission: submission });
+  }
+  if (current.visible.has(params?.threadId) && method === 'thread/queue/delete') {
+    const entries = queue(params.threadId);
+    const index = entries.findIndex(entry => entry.id === params.queuedSubmissionId);
+    if (index === -1) return result({ deleted: false });
+    entries.splice(index, 1);
+    return result({ deleted: true });
+  }
+  if (current.visible.has(params?.threadId) && method === 'thread/queue/reorder') {
+    const entries = queue(params.threadId);
+    const ordered = params.queuedSubmissionIds.flatMap(queuedSubmissionId => {
+      const entry = entries.find(candidate => candidate.id === queuedSubmissionId);
+      return entry ? [entry] : [];
+    });
+    if (ordered.length !== entries.length) return result({ error: { code: -32600, message: 'Queued temporary message was not found.' } });
+    current.queues.set(params.threadId, ordered);
+    return result({});
+  }
+  if (current.visible.has(params?.threadId) && method === 'thread/queue/start') {
+    const entries = queue(params.threadId);
+    const index = entries.findIndex(entry => entry.id === params.queuedSubmissionId);
+    if (index === -1) return result({ error: { code: -32600, message: 'Queued temporary message was not found.' } });
+    const [submission] = entries.splice(index, 1);
+    // Send the stored input as a normal ephemeral turn. It never reaches the
+    // server's persisted queue and is discarded with this extension window.
+    return { method: 'turn/start', params: { threadId: params.threadId, input: submission.input } };
   }
   if (method === 'turn/start' && current.prewarmed.has(params?.threadId)) {
     if (current.prewarmed.get(params.threadId) !== enabled()) {
@@ -62,6 +109,7 @@ function receive(connection, message) {
   if (message.method === 'thread/deleted') {
     current.visible.delete(message.params?.threadId);
     current.prewarmed.delete(message.params?.threadId);
+    current.queues.delete(message.params?.threadId);
   }
   return message;
 }
@@ -71,6 +119,15 @@ globalThis.__TEMP_CODEX_V3__ = api;
 
 queueMicrotask(() => {
   const vscode = require('vscode');
+  const reloadMarker = path.join(__dirname, '..', '.temp-codex-reload-once');
+  if (fs.existsSync(reloadMarker)) {
+    // File-watcher notifications can arrive after the user's first reload. Remove
+    // the marker before requesting one clean reload, so this can never loop.
+    try {
+      fs.unlinkSync(reloadMarker);
+      void vscode.commands.executeCommand('workbench.action.reloadWindow');
+    } catch { /* A manual reload remains safe if VS Code cannot run the command. */ }
+  }
   const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 95);
   item.command = 'chatgpt.tempCodex.toggle';
   item.name = 'Codex Temporary Chats';

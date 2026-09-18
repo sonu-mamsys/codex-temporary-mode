@@ -32,7 +32,12 @@ test('installed extension routing delivers user temporary events and hides inter
   assert(classStart > 0 && classEnd > classStart);
   const context = vm.createContext({
     module: { exports: {} }, queueMicrotask() {},
-    require: name => { assert.equal(name, 'vscode'); return { workspace: { getConfiguration: () => ({ get: () => true }) } }; },
+    require: name => {
+      if (name === 'fs') return fs;
+      if (name === 'path') return path;
+      assert.equal(name, 'vscode');
+      return { workspace: { getConfiguration: () => ({ get: () => true }) } };
+    },
     ES: 'ui', SA: () => false, hf: x => x, Eyt: t => t.ephemeral === true,
     BA: p => p?.thread ?? null, _f: p => p?.thread?.id ?? p?.threadId ?? null,
     nq: e => e.result?.thread ?? null, oG: () => true,

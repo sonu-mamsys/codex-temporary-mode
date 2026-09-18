@@ -17,21 +17,22 @@ Unofficial project. Not affiliated with or endorsed by OpenAI.
 Once the npm release is available:
 
 ```sh
-npm install -g codex-temporary-mode
+npm i -g codex-temporary-mode
 ```
 
 On Windows, use `npm.cmd` if PowerShell blocks `npm`.
+The installer asks whether to patch the supported VS Code Codex extension. When
+you accept, reload VS Code once; the patch completes its clean reload itself.
 
 ## Temporary chats in VS Code
 
-1. Run:
+If you skipped the installer prompt, run:
 
-   ```sh
-   codex-temporary-mode vscode install
-   ```
+```sh
+codex-temporary-mode vscode install
+```
 
-2. Reload VS Code.
-3. Start a new Codex chat and turn on **Temporary**.
+Then reload VS Code once and start a new Codex chat with **Temporary** on.
 
 Look for the purple input and **Temporary chat** label. Existing conversations keep their original mode.
 
@@ -58,6 +59,8 @@ For more options, run `codex-temporary-mode --help`.
 ## Good to know
 
 - Temporary chats cannot be reopened later. Any file changes still remain.
+- Queued follow-up messages in a temporary chat are held only until the current
+  VS Code window closes or reloads.
 - Temporary mode does not guarantee zero retention by OpenAI or clear text already shown in your terminal.
 - Terminal mode supports text chat, without attachments or interactive approval prompts.
 - VS Code support is for local chats only. Cloud chats, remote connections and ChatGPT desktop/web are not supported.

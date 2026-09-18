@@ -48,6 +48,8 @@ function extension(t, source = hostSource, metadata = pkg) {
 function runtime(source = hostSource) {
   let on = true;
   const context = vm.createContext({ module: { exports: {} }, queueMicrotask() {}, require(name) {
+    if (name === 'fs') return fs;
+    if (name === 'path') return path;
     if (name === 'vscode') return { workspace: { getConfiguration: () => ({ get: () => on }) } };
     if (name === './temp-codex-inject.cjs') return context.__TEMP_CODEX_V3__;
     throw new Error('Unexpected dependency ' + name);
@@ -146,7 +148,7 @@ test('renderer retains server ephemeral mode without turning a normal chat into 
   assert.equal(fork.ephemeral, true);
 });
 
-test('ephemeral queue reads are empty and normal queue requests still reach the server', () => {
+test('ephemeral queue stays in memory and starts the next turn without server queue storage', () => {
   const { host } = runtime();
   host.sendProviderRequest('ui', '1', 'thread/start', {});
   host.routeIncomingMessage({ id: 'ui:1', result: { thread: { id: 'temp', ephemeral: true } } });
@@ -155,16 +157,27 @@ test('ephemeral queue reads are empty and normal queue requests still reach the 
   assert.equal(host.sent, sent);
   assert.equal(host.delivered.at(-1).result.data.length, 0);
   assert.equal(host.delivered.at(-1).result.nextCursor, null);
-  host.sendProviderRequest('ui', '3', 'thread/queue/list', { threadId: 'normal' });
+  const input = [{ type: 'text', text: 'next message', text_elements: [] }];
+  host.sendProviderRequest('ui', '3', 'thread/queue/add', { threadId: 'temp', input, clientUserMessageId: 'message-2' });
+  assert.equal(host.sent, sent);
+  const queued = host.delivered.at(-1).result.queuedSubmission;
+  assert.equal(queued.input, input);
+  host.sendProviderRequest('ui', '4', 'thread/queue/list', { threadId: 'temp' });
+  assert.equal(JSON.stringify(host.delivered.at(-1).result.data), JSON.stringify([queued]));
+  host.sendProviderRequest('ui', '5', 'thread/queue/start', { threadId: 'temp', queuedSubmissionId: queued.id });
+  assert.equal(host.sent.method, 'turn/start');
+  assert.equal(JSON.stringify(host.sent.params), JSON.stringify({ threadId: 'temp', input }));
+  host.sendProviderRequest('ui', '6', 'thread/queue/list', { threadId: 'temp' });
+  assert.equal(JSON.stringify(host.delivered.at(-1).result.data), '[]');
+  host.sendProviderRequest('ui', '7', 'thread/queue/list', { threadId: 'normal' });
   assert.equal(host.sent.method, 'thread/queue/list');
-  host.sendProviderRequest('ui', '4', 'thread/queue/add', { threadId: 'temp' });
-  assert.equal(host.sent.method, 'thread/queue/add');
 });
 
 test('VS Code install is idempotent and restore is byte-exact', t => {
   const root = extension(t);
   const before = fs.readFileSync(path.join(root, 'package.json'));
   installVSCode(root, helper);
+  assert(fs.existsSync(path.join(root, '.temp-codex-reload-once')));
   assert.match(installVSCode(root, helper), /Already patched/);
   assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'package.json'))).contributes.configuration.length, 1);
   restoreVSCode(root);
@@ -172,7 +185,20 @@ test('VS Code install is idempotent and restore is byte-exact', t => {
   assert.equal(fs.readFileSync(path.join(root, pkg.main), 'utf8'), hostSource);
   assert.equal(fs.readFileSync(path.join(root, RENDERER_PATH), 'utf8'), rendererSource);
   assert(!fs.existsSync(path.join(root, 'out/temp-codex-inject.cjs')));
+  assert(!fs.existsSync(path.join(root, '.temp-codex-reload-once')));
   installVSCode(root, helper); // restore cleaned stale backups
+});
+
+test('a verified v3 patch upgrades to the current one-shot reload patch', t => {
+  const root = extension(t);
+  installVSCode(root, helper);
+  const manifestPath = path.join(root, '.temp-codex-v3.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.version = 3;
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+  assert.match(installVSCode(root, helper), /Reload VS Code once/);
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, 'utf8')).version, 5);
+  assert(fs.existsSync(path.join(root, '.temp-codex-reload-once')));
 });
 
 test('unsupported versions and changed source layouts are rejected before writing', t => {
@@ -235,7 +261,8 @@ test('removed desktop options are rejected without modifying VS Code', t => {
   }
 });
 
-test('npm has no automatic app-patching lifecycle scripts', () => {
+test('npm asks to patch VS Code during installation', () => {
   const scripts = JSON.parse(fs.readFileSync(path.join(repo, 'package.json'))).scripts;
-  for (const name of ['preinstall', 'install', 'postinstall', 'prepare', 'uninstall']) assert.equal(scripts[name], undefined);
+  assert.equal(scripts.postinstall, 'node build/postinstall.mjs');
+  for (const name of ['preinstall', 'install', 'prepare', 'uninstall']) assert.equal(scripts[name], undefined);
 });
