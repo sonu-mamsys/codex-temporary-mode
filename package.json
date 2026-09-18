@@ -16,8 +16,8 @@
   },
   "license": "MIT",
   "bin": {
-    "codex-temporary-mode": "./build/codex-temporary-mode.mjs",
-    "temp-codex": "./build/temp-codex.mjs"
+    "codex-temporary-mode": "build/codex-temporary-mode.mjs",
+    "temp-codex": "build/temp-codex.mjs"
   },
   "engines": {
     "node": ">=22"
