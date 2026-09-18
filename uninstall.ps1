@@ -1,5 +1,3 @@
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot
-node .\patch.mjs --uninstall --vscode @args
-
+node (Join-Path $PSScriptRoot "uninstall.mjs") @args
 exit $LASTEXITCODE

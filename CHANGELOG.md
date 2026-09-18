@@ -1,5 +1,11 @@
 # codex-temporary-mode changelog
 
+## 3.2.3
+
+- Added one-command uninstall for VS Code patches, Temporary settings and the terminal package.
+- Updated Bash and PowerShell uninstall scripts; repeated cleanup is safe.
+- Linked the npm package to its GitHub repository.
+
 ## 3.2.2
 
 - Renamed the package and primary command to `codex-temporary-mode`; the `temp-codex` alias remains available.

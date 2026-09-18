@@ -65,14 +65,19 @@ For more options, run `codex-temporary-mode --help`.
 
 ## Uninstall
 
-If you enabled codex-temporary-mode in VS Code, restore it first:
+Run this from your project folder:
 
 ```sh
-codex-temporary-mode vscode restore
-npm uninstall -g codex-temporary-mode
+codex-temporary-mode uninstall
 ```
 
-Reload VS Code afterward. If you only used the terminal, just run the uninstall command.
+This restores detected VS Code installations, removes the saved Temporary setting, and uninstalls the terminal package from your active npm installation. Reload VS Code and close any running temporary chats afterward.
+
+Using a source checkout? Run `bash uninstall.sh` or `.\uninstall.ps1` instead. Run it again safely if already uninstalled.
+
+For a custom extension location, add `--vscode-path <folder>`. For settings in another project or a custom VS Code profile, add `--settings-path <settings.json or .code-workspace>`. Repeat these options for multiple locations. Other machines, WSL environments and npm installations must be cleaned up separately.
+
+Your normal Codex installation, saved conversations, project files and unrelated settings are kept. If restoration is blocked by changed extension files or backups, uninstall reports the problem and keeps the package available for recovery.
 
 ## License
 

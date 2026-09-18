@@ -1,6 +1,6 @@
 {
   "name": "codex-temporary-mode",
-  "version": "3.2.2",
+  "version": "3.2.3",
   "private": false,
   "type": "module",
   "description": "Temporary chats for Codex in VS Code and the terminal",
@@ -37,6 +37,15 @@
     "access": "public"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "jsonc-parser": "3.3.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sonu-mamsys/codex-temporary-mode.git"
+  },
+  "homepage": "https://github.com/sonu-mamsys/codex-temporary-mode#readme",
+  "bugs": {
+    "url": "https://github.com/sonu-mamsys/codex-temporary-mode/issues"
   }
 }

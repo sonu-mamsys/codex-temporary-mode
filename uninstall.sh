@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 set -eu
-cd "$(dirname "$0")"
-node patch.mjs --uninstall --vscode "$@"
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+node "$script_dir/uninstall.mjs" "$@"
