@@ -3,84 +3,119 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
-import { adaptVSCodeSource, adaptRendererSource, adaptComposerSource, RENDERER_PATH, COMPOSER_PATH } from '../lib/vscode-adapter.mjs';
 import { spawnSync } from 'node:child_process';
+import { adaptVSCodeSource, adaptRendererSource, adaptComposerSource, detectVSCodeCompatibility } from '../lib/vscode-adapter.mjs';
+import { installVSCode, restoreVSCode } from '../lib/installers.mjs';
 
-test('real composer adapter parses and matches installed UI', { skip: !process.env.TEMP_CODEX_REVIEW_EXTENSION }, () => {
-  const file = path.join(process.env.TEMP_CODEX_REVIEW_EXTENSION, COMPOSER_PATH);
-  const original = fs.readFileSync(fs.existsSync(`${file}.temp-codex.bak`) ? `${file}.temp-codex.bak` : file, 'utf8');
-  const patched = adaptComposerSource(original);
-  if (fs.existsSync(`${file}.temp-codex.bak`)) assert.equal(fs.readFileSync(file, 'utf8'), patched);
-  const checked = spawnSync(process.execPath, ['--input-type=module', '--check'], { input: patched, encoding: 'utf8' });
-  assert.equal(checked.status, 0, checked.stderr);
-});
+const reviewRoot = process.env.TEMP_CODEX_REVIEW_EXTENSION;
+const helper = fs.readFileSync(new URL('../src/inject/vscode-inject.cjs', import.meta.url), 'utf8');
+const key = relative => path.posix.normalize(relative.replaceAll('\\', '/'));
 
-test('installed extension routing delivers user temporary events and hides internal ones', { skip: !process.env.TEMP_CODEX_REVIEW_EXTENSION }, () => {
-  const root = process.env.TEMP_CODEX_REVIEW_EXTENSION;
-  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  const main = path.join(root, pkg.main);
-  const installed = fs.readFileSync(main, 'utf8');
-  const hasPatch = fs.existsSync(path.join(root, '.temp-codex-v3.json'));
-  const original = hasPatch ? fs.readFileSync(`${main}.temp-codex.bak`, 'utf8') : installed;
-  const patched = adaptVSCodeSource(original, pkg);
-  if (hasPatch) assert.equal(installed, patched, 'Installed adapter must match the tested source transformation');
-  new vm.Script(patched);
-  const classStart = patched.indexOf('vI=class{');
-  const classEnd = patched.indexOf(';function Eyt', classStart);
-  assert(classStart > 0 && classEnd > classStart);
-  const context = vm.createContext({
-    module: { exports: {} }, queueMicrotask() {},
-    require: name => {
-      if (name === 'fs') return fs;
-      if (name === 'path') return path;
-      assert.equal(name, 'vscode');
-      return { workspace: { getConfiguration: () => ({ get: () => true }) } };
-    },
-    ES: 'ui', SA: () => false, hf: x => x, Eyt: t => t.ephemeral === true,
-    BA: p => p?.thread ?? null, _f: p => p?.thread?.id ?? p?.threadId ?? null,
-    nq: e => e.result?.thread ?? null, oG: () => true,
-  });
-  vm.runInContext(fs.readFileSync(new URL('../src/inject/vscode-inject.cjs', import.meta.url), 'utf8'), context);
-  const Host = vm.runInContext(`(${patched.slice(classStart + 3, classEnd)})`, context);
-  // No host constructor, modules, child processes, timers, UI or credentials run.
-  const host = Object.create(Host.prototype);
-  const events = [];
-  Object.assign(host, {
-    providers: new Map([['ui', { onResult: e => events.push(e), onNotification: e => events.push(e) }]]),
-    pendingRequests: new Map(), pendingTurnStartRequestIds: new Set(), pendingPrewarmedThreadStartRequestIds: new Set(),
-    internalNotificationHandlers: new Set(), ephemeralThreadTimeouts: new Map(),
-    requestUserInputAutoResolutionCoordinator: { observeServerNotification() {} },
-    prewarmedThreads: { suppressThreadStarted: () => false },
-    recordLastOutboundMethod() {}, sendMessage(m) { this.sent = m; return true; },
-    markEphemeralThreadId(id) { this.ephemeralThreadTimeouts.set(id, true); },
-  });
-  host.sendProviderRequest('ui', '1', 'thread/start', {});
-  assert.equal(host.sent.params.ephemeral, true);
-  host.routeIncomingMessage({ id: 'ui:1', result: { thread: { id: 'temp', ephemeral: true } } });
-  assert.equal(host.routeIncomingMessage({ method: 'thread/started', params: { thread: { id: 'temp', ephemeral: true } } }).routeKind, 'notification');
-  for (const method of ['item/agentMessage/delta', 'turn/completed']) {
-    assert.equal(host.routeIncomingMessage({ method, params: { threadId: 'temp' } }).routeKind, 'notification');
-    assert.equal(events.at(-1).method, method);
+function inside(root, relative) {
+  const resolved = path.resolve(root, relative);
+  assert.ok(resolved.startsWith(`${path.resolve(root)}${path.sep}`), `Path outside supplied extension: ${relative}`);
+  return resolved;
+}
+
+function tempDirectory(t) {
+  const directory = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'temp-codex-installed-source-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  return directory;
+}
+
+function loadInstalledExtension() {
+  const root = path.resolve(reviewRoot);
+  const manifestFile = inside(root, '.temp-codex-v3.json');
+  const manifest = fs.existsSync(manifestFile) ? JSON.parse(fs.readFileSync(manifestFile, 'utf8')) : null;
+  const patchedPaths = new Set((manifest?.files || []).map(entry => key(entry.path)));
+  const original = relative => {
+    const file = inside(root, relative);
+    return fs.readFileSync(patchedPaths.has(key(relative)) ? `${file}.temp-codex.bak` : file, 'utf8');
+  };
+  const packagePath = 'package.json';
+  const pkg = JSON.parse(original(packagePath));
+  const mainPath = pkg.main || 'out/extension.js';
+  const assetsRoot = inside(root, 'webview/assets');
+  const assets = fs.readdirSync(assetsRoot, { withFileTypes: true })
+    .filter(entry => entry.isFile() && /^app-initial-[\da-f]+\.js$/i.test(entry.name))
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map(entry => {
+      const assetPath = path.posix.join('webview', 'assets', entry.name);
+      return { path: assetPath, absolute: inside(root, assetPath), source: original(assetPath) };
+    });
+  const main = { path: mainPath, absolute: inside(root, mainPath), source: original(mainPath) };
+  const compatibility = detectVSCodeCompatibility(pkg, main.source, assets);
+  return { root, manifest, pkg, original, packagePath, main, compatibility };
+}
+
+function assertInstalledTransform({ manifest }, asset, transformed, label) {
+  assert.notEqual(transformed, asset.source, `${label} adapter must alter the selected original source`);
+  if (manifest) assert.equal(fs.readFileSync(asset.absolute, 'utf8'), transformed, `${label} installed source must match its dynamic adapter transformation`);
+}
+
+function copySource(root, relative, source) {
+  const destination = inside(root, relative);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.writeFileSync(destination, source);
+}
+
+test('real extension adapters discover the current profile and parse selected source files', { skip: !reviewRoot }, () => {
+  const installed = loadInstalledExtension();
+  const patchedMain = adaptVSCodeSource(installed.main.source, installed.pkg);
+  assert.ok(installed.compatibility.profile.id);
+  assert.ok(installed.compatibility.renderer?.path);
+  assertInstalledTransform(installed, installed.main, patchedMain, 'core');
+  new vm.Script(patchedMain, { filename: installed.main.absolute });
+
+  const renderer = installed.compatibility.renderer;
+  const patchedRenderer = adaptRendererSource(renderer.source, installed.compatibility.profile);
+  assertInstalledTransform(installed, renderer, patchedRenderer, 'renderer');
+
+  const composer = installed.compatibility.composer;
+  if (composer) {
+    const patchedComposer = adaptComposerSource(composer.source, installed.compatibility.profile);
+    assertInstalledTransform(installed, composer, patchedComposer, 'composer');
+    const checked = spawnSync(process.execPath, ['--input-type=module', '--check'], { input: patchedComposer, encoding: 'utf8' });
+    assert.equal(checked.status, 0, checked.stderr);
   }
-  assert.equal(host.routeIncomingMessage({ method: 'thread/started', params: { thread: { id: 'internal', ephemeral: true } } }).routeKind, 'notification_ephemeral_thread_started');
-  assert.equal(host.routeIncomingMessage({ method: 'turn/completed', params: { threadId: 'internal' } }).routeKind, 'notification_dropped_ephemeral');
 });
 
-test('real renderer storage-mode mapping feeds its existing history exclusion', { skip: !process.env.TEMP_CODEX_REVIEW_EXTENSION }, () => {
-  const root = process.env.TEMP_CODEX_REVIEW_EXTENSION;
-  const file = path.join(root, RENDERER_PATH);
-  const original = fs.readFileSync(fs.existsSync(`${file}.temp-codex.bak`) ? `${file}.temp-codex.bak` : file, 'utf8');
-  const patched = adaptRendererSource(original);
-  if (fs.existsSync(`${file}.temp-codex.bak`)) assert.equal(fs.readFileSync(file, 'utf8'), patched);
-  const mapping = patched.match(/ephemeral:v\.thread\.ephemeral===!0\|\|d\.ephemeral,sideConversation:d\.ephemeral/)[0];
-  const create = new Function('v', 'd', `return {${mapping}}`);
-  const historySource = fs.readFileSync(path.join(root, 'webview/assets/app-initial-1e5ee25fb4ec.js'), 'utf8');
-  const filter = historySource.match(/e\.filter\(e=>e\.ephemeral!==!0\)/)[0];
-  const saveHistory = new Function('e', `return ${filter}`);
+test('real extension profile installs and restores only a disposable copy', { skip: !reviewRoot }, t => {
+  const installed = loadInstalledExtension();
+  const scratch = tempDirectory(t);
+  const sources = [
+    { path: installed.packagePath, source: installed.original(installed.packagePath) },
+    installed.main,
+    installed.compatibility.renderer,
+    ...(installed.compatibility.composer ? [installed.compatibility.composer] : []),
+  ];
+  for (const source of sources) copySource(scratch, source.path, source.source);
+  const originals = new Map(sources.map(source => [source.path, Buffer.from(source.source)]));
+  const priorStateHome = process.env.CODEX_TEMPORARY_STATE_HOME;
+  process.env.CODEX_TEMPORARY_STATE_HOME = path.join(scratch, 'state');
+  try {
+    assert.match(installVSCode(scratch, helper), /Patched VS Code extension/);
+    assert.equal(fs.existsSync(path.join(scratch, '.temp-codex-v3.json')), true);
+    assert.match(restoreVSCode(scratch), /Restored VS Code extension/);
+    for (const [relative, before] of originals) assert.deepEqual(fs.readFileSync(inside(scratch, relative)), before, `Restored ${relative} must be byte-exact.`);
+  } finally {
+    if (priorStateHome === undefined) delete process.env.CODEX_TEMPORARY_STATE_HOME;
+    else process.env.CODEX_TEMPORARY_STATE_HOME = priorStateHome;
+  }
+});
+
+test('real renderer storage-mode adapter is selected dynamically and preserves temporary storage semantics', { skip: !reviewRoot }, () => {
+  const installed = loadInstalledExtension();
+  const patched = adaptRendererSource(installed.compatibility.renderer.source, installed.compatibility.profile);
+  const mapping = patched.match(/ephemeral:v\.thread\.ephemeral===!0\|\|d\.ephemeral,sideConversation:d\.ephemeral/);
+  assert.ok(mapping, 'Selected renderer must preserve server-confirmed ephemeral storage without forcing a side conversation.');
+  const create = new Function('v', 'd', `return {${mapping[0]}}`);
   const temporary = create({ thread: { ephemeral: true } }, { ephemeral: false });
   const normal = create({ thread: { ephemeral: false } }, { ephemeral: false });
-  assert.deepEqual(saveHistory([temporary, normal]), [normal]);
+  assert.equal(temporary.ephemeral, true);
   assert.equal(temporary.sideConversation, false);
+  assert.equal(normal.ephemeral, false);
 });

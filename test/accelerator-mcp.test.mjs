@@ -76,7 +76,7 @@ test('stdio MCP exposes Delta and Pipeline tools and rehydrates after reset', as
   mcp.notify('notifications/initialized');
   const listed = await mcp.request('tools/list');
   assert.deepEqual(listed.tools.map(tool => tool.name).sort(), [
-    'cancel_checkpoint', 'create_checkpoint', 'get_latest_validation', 'get_pipeline_status',
+    'cancel_checkpoint', 'create_checkpoint', 'get_acceleration_stats', 'get_latest_validation', 'get_pipeline_status',
     'get_raw_output', 'read_file_delta', 'reset_context_generation', 'run_command_delta', 'run_final_validation',
   ]);
 
@@ -103,4 +103,10 @@ test('stdio MCP exposes Delta and Pipeline tools and rehydrates after reset', as
   assert.equal(commandResult.execution.status, 'failed'); assert.equal(commandResult.new[0].code, 'TS9000');
   const raw = await mcp.request('tools/call', { name: 'get_raw_output', arguments: { runId: commandResult.runId, stream: 'stderr' } });
   assert.match(raw.content[0].text, /TS9000: mcp failure/);
+  const stats = await mcp.request('tools/call', { name: 'get_acceleration_stats', arguments: {} });
+  const snapshot = JSON.parse(stats.content[0].text);
+  assert.deepEqual(snapshot.source, { reads: 3, fullBytes: 18, deliveredBytes: 12, savedBytes: 6, reductionPercent: 33.3 });
+  assert.equal(snapshot.commands.runs, 1);
+  assert.equal(snapshot.commands.rawDiagnosticOutputBytes, commandResult.raw.stderrBytes);
+  assert.ok(snapshot.commands.compactDiagnosticBytes > 0);
 });

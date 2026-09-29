@@ -29,7 +29,7 @@ test('setup configures all modes per repository without replacing existing proje
   const loadedPipeline = await loadPipelineConfig(root);
   assert.equal(pipeline.generatedBy, 'codex-temporary-mode');
   assert.equal(loadedPipeline.found, true);
-  assert.deepEqual(pipeline.pipeline.profiles.targeted.map(item => item.id), ['typecheck']);
+  assert.deepEqual(pipeline.pipeline.profiles.targeted.map(item => item.id), ['typecheck', 'tests']);
   assert.deepEqual(pipeline.pipeline.profiles.final.map(item => item.id), ['typecheck', 'tests']);
   assert.equal(first.mcp.changed, true);
   assert.equal(first.workspaceRoot, fs.realpathSync(root));

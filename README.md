@@ -1,5 +1,36 @@
 # codex-temporary-mode
 
+Temporary Codex chats, plus an optional local coding accelerator for Delta Mode and Pipeline Mode.
+
+> **Unofficial project. Not affiliated with or endorsed by OpenAI.**
+
+## Get started in 60 seconds
+
+```sh
+npm i -g codex-temporary-mode
+cd /path/to/your/git-repository
+codex-temporary-mode setup --all
+codex-temporary-mode doctor
+```
+
+`setup --all` installs the VS Code Temporary Mode patch and configures the current Git project's optional MCP accelerator. It changes only the detected local extension and the project's `.codex/` files. `setup` without `--all` remains the existing combined-command alias. `doctor` is read-only and reports exactly what was found.
+
+Want just one feature instead?
+
+* **Do not save a local VS Code Codex conversation:** `codex-temporary-mode temporary install`
+* **Use temporary chats in the terminal:** run `codex-temporary-mode`
+* **Reduce repeated file/context output and run checkpoints:** `codex-temporary-mode accelerator setup`
+
+## Feature and client support
+
+| Feature | Codex CLI | VS Code Codex | ChatGPT desktop | ChatGPT web |
+| --- | --- | --- | --- | --- |
+| Temporary Mode | Yes | Yes | No | No |
+| Delta Mode (local MCP) | Yes | Yes | Yes | No |
+| Pipeline Mode (local MCP) | Yes | Yes | Yes | No |
+
+Temporary Mode and the accelerator are separate: the VS Code patch enables temporary local chats, while the accelerator is a project-scoped local MCP server. Use `codex-temporary-mode doctor --json` for a support-friendly, machine-readable local report.
+
 Use Codex without saving one-off conversations to your chat history.
 
 Works with:
@@ -9,25 +40,23 @@ Works with:
 
 * **Codex MCP clients** — expose an optional local Delta Mode accelerator.
 
-> **Unofficial project. Not affiliated with or endorsed by OpenAI.**
-
-## Install
+## Detailed installation
 
 Requirements:
 
 * Node.js 22.13+
 * Codex installed and signed in
-* VS Code Codex extension `26.908.40401` and above for VS Code support
+* A structurally compatible local VS Code Codex extension for Temporary Mode; run `doctor` after extension updates
 
 Install globally:
 
 ```sh
 npm i -g codex-temporary-mode
 cd /path/to/your/repository
-codex-temporary-mode setup
+codex-temporary-mode setup --all
 ```
 
-`setup` performs the three local steps:
+`setup --all` performs the three local steps:
 
 * Enables Temporary Mode in the installed VS Code Codex extension.
 * Adds the Delta and Pipeline MCP server to the trusted project's `.codex/config.toml`.
@@ -41,7 +70,7 @@ Run `setup` once in each repository where you want Delta and Pipeline Mode, then
 
 If you enabled VS Code support during installation, start a new Codex chat and turn on **Temporary**.
 
-Temporary chats have:
+Temporary chats have a status bar toggle. On extension layouts with the verified composer hook, they also have:
 
 * A purple chat input
 * A **Temporary chat** label
@@ -52,10 +81,19 @@ Existing chats are not affected.
 If you skipped VS Code setup during installation, run:
 
 ```sh
-codex-temporary-mode vscode install
+codex-temporary-mode temporary install
 ```
 
 Then reload VS Code once.
+
+After an explicit install, terminal startup performs a lightweight compatibility check. If a Codex extension update removed the patch and the new bundle still matches a known structural profile, the patch is restored automatically. Incompatible layouts are left untouched and reported by `doctor`; no background daemon is installed.
+
+You can also inspect or retry the patch directly:
+
+```sh
+codex-temporary-mode temporary check
+codex-temporary-mode temporary reapply
+```
 
 If you change Temporary Mode from the status bar or Command Palette, reload VS Code before starting the next chat.
 
@@ -90,22 +128,23 @@ codex-temporary-mode --help
 
 ## Delta Mode (v0.1)
 
-Delta Mode is a separate local MCP process. It does not patch Codex and it does not intercept native tools. It exposes four tools:
+Delta Mode is a separate local MCP process. It does not patch Codex and it does not intercept native tools. It exposes five tools:
 
 * `read_file_delta` — exact full text on first read, then unchanged markers or textual diffs
 * `run_command_delta` — compact, deterministic diagnostic changes between compatible runs
 * `get_raw_output` — paged access to retained stdout/stderr when compact output is insufficient
 * `reset_context_generation` — forces full source rehydration after compaction, resume, or uncertainty
+* `get_acceleration_stats` — exact session byte savings for source delivery and compact command results
 
 File responses report exact full-source, delivered-text, and saved-text byte counts. These measure transmitted source or diff text, not estimated model tokens.
 
-The recommended setup command adds the STDIO server automatically:
+The accelerator setup command adds the STDIO server automatically:
 
 ```sh
-codex-temporary-mode setup
+codex-temporary-mode accelerator setup
 ```
 
-Use `codex-temporary-mode setup --skip-vscode` when you only want Delta and Pipeline Mode. For manual setup, use a trusted project's `.codex/config.toml`:
+`codex-temporary-mode setup --skip-vscode` remains available for existing scripts. For manual setup, use a trusted project's `.codex/config.toml`:
 
 ```toml
 [mcp_servers.codex_accelerator]
@@ -157,7 +196,20 @@ Validation commands come only from the trusted repository configuration `.codex/
 
 Checkpointing is manual in v0.2. Queued checkpoints for the same profile collapse to the newest workspace, while a running validation is allowed to finish and is reported as historical if the live workspace changed. Raw command output remains available through `get_raw_output`.
 
+For targeted profiles, Pipeline Mode deterministically derives likely tests from changed JavaScript/TypeScript files, same-name test conventions, and direct relative import consumers. Only commands explicitly configured with the `vitest` or `jest` parser receive selected test paths; every other configured command remains unchanged. The selected impact and exact resulting command plan are included in checkpoint identity and results.
+
 Commands in a profile run in order and stop after a failure. Set `"continueOnFailure": true` on a command when later checks are independent and should still run.
+
+## Diagnostics
+
+Run a read-only check before reporting an issue or after a Codex/VS Code update:
+
+```sh
+codex-temporary-mode doctor
+codex-temporary-mode doctor --json
+```
+
+It checks the local Node version, Git workspace, Codex CLI (`codex mcp list`), installed VS Code extension and patch manifest, and the project MCP/Pipeline configuration. It does not modify extension files, configuration, authentication, or workspace data.
 
 ## Uninstall
 
@@ -185,7 +237,7 @@ Your normal Codex installation, saved chats, project files, and unrelated VS Cod
 * Terminal mode currently supports text chat only.
 * VS Code support currently works with local chats only.
 * Temporary-chat patching does not support cloud chats, remote connections, ChatGPT web, or ChatGPT desktop; Delta Mode uses the separate shared local MCP configuration.
-* VS Code integration currently supports Codex extension `26.908.40401`. A Codex extension update may require a new `codex-temporary-mode` release.
+* VS Code patching checks the actual extension and renderer structure. `26.908.40401` supports the composer control; `26.917.62051` supports Temporary Mode through the status bar because its composer hook changed. Other layouts are accepted only when the required patch points match.
 
 ## License
 
