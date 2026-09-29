@@ -32,7 +32,11 @@ test('setup configures all modes per repository without replacing existing proje
   assert.deepEqual(pipeline.pipeline.profiles.targeted.map(item => item.id), ['typecheck', 'tests']);
   assert.deepEqual(pipeline.pipeline.profiles.final.map(item => item.id), ['typecheck', 'tests']);
   assert.equal(first.mcp.changed, true);
-  assert.equal(first.workspaceRoot, fs.realpathSync(root));
+  // Windows Git may expand an 8.3 temp path while Node retains the short name.
+  const configuredRoot = fs.statSync(first.workspaceRoot);
+  const fixtureRoot = fs.statSync(root);
+  assert.equal(configuredRoot.dev, fixtureRoot.dev);
+  assert.equal(configuredRoot.ino, fixtureRoot.ino);
   assert.equal(second.mcp.changed, false);
   assert.equal(calls.length, 1);
   assert(calls[0].args.includes('--vscode'));
