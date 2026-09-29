@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -7,11 +7,19 @@ import vm from 'node:vm';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { installVSCode, restoreVSCode } from '../lib/installers.mjs';
-import { adaptVSCodeSource, adaptRendererSource, RENDERER_PATH, COMPOSER_PATH, SUPPORTED_VSCODE_VERSION } from '../lib/vscode-adapter.mjs';
+import { adaptVSCodeSource, adaptRendererSource, RENDERER_PATH, COMPOSER_PATH } from '../lib/vscode-adapter.mjs';
 
 const repo = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const helper = fs.readFileSync(path.join(repo, 'src/inject/vscode-inject.cjs'), 'utf8');
-const pkg = { publisher: 'openai', name: 'chatgpt', version: SUPPORTED_VSCODE_VERSION, main: 'out/extension.js', contributes: { configuration: [] } };
+const stateHome = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'temp-codex-state-'));
+const previousStateHome = process.env.CODEX_TEMPORARY_STATE_HOME;
+process.env.CODEX_TEMPORARY_STATE_HOME = stateHome;
+after(() => {
+  if (previousStateHome === undefined) delete process.env.CODEX_TEMPORARY_STATE_HOME;
+  else process.env.CODEX_TEMPORARY_STATE_HOME = previousStateHome;
+  fs.rmSync(stateHome, { recursive: true, force: true });
+});
+const pkg = { publisher: 'openai', name: 'chatgpt', version: 'fixture-version', main: 'out/extension.js', contributes: { configuration: [] } };
 const hostSource = `const endpoints={"get-settings":()=>this.settings.readAll(),}; const ES='ui'; class Host {
 sendProviderRequest(e,r,n,o,i,s){this.sent={id:e+':'+r,method:n,params:o};}
 routeIncomingMessage(e,r=e){const n=e.method,i=e.params?.thread,s=i?.id||e.params?.threadId;
@@ -42,7 +50,9 @@ function extension(t, source = hostSource, metadata = pkg) {
   fs.writeFileSync(path.join(dir, 'out/extension.js'), source);
   fs.mkdirSync(path.dirname(path.join(dir, RENDERER_PATH)), { recursive: true });
   fs.writeFileSync(path.join(dir, RENDERER_PATH), rendererSource);
-  fs.writeFileSync(path.join(dir, COMPOSER_PATH), 'function zKn(e){return e;}');
+  fs.writeFileSync(path.join(dir, COMPOSER_PATH), `const O$={},k$={jsx:null},Dm={},$={},FHe=()=>({}),GC={};
+function bindings(){const composer=il(Dm).value,scope=il($),{hostId}=Th(FHe());return k$.jsx||NC(scope,composer.conversationId)||scope.get(GC)||xm('mode')||hostId;}
+function zKn(e){return e;}`);
   return dir;
 }
 function runtime(source = hostSource) {
@@ -197,15 +207,28 @@ test('a verified v3 patch upgrades to the current patch version', t => {
   manifest.version = 3;
   fs.writeFileSync(manifestPath, JSON.stringify(manifest));
   assert.match(installVSCode(root, helper), /Reload VS Code once/);
-  assert.equal(JSON.parse(fs.readFileSync(manifestPath, 'utf8')).version, 6);
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, 'utf8')).version, 7);
   assert(!fs.existsSync(path.join(root, '.temp-codex-reload-once')));
 });
 
-test('unsupported versions and changed source layouts are rejected before writing', t => {
+test('compatibility follows structure while changed layouts are rejected before writing', t => {
   const root = extension(t, hostSource, { ...pkg, version: 'unknown' });
-  assert.throws(() => installVSCode(root, helper), /Unsupported/);
-  assert.equal(fs.readFileSync(path.join(root, pkg.main), 'utf8'), hostSource);
-  assert(!fs.existsSync(path.join(root, pkg.main + '.temp-codex.bak')));
+  assert.match(installVSCode(root, helper), /Patched VS Code extension unknown/);
+  const movedComposer = extension(t, hostSource, { ...pkg, version: 'later-layout' });
+  const composer = path.join(movedComposer, COMPOSER_PATH);
+  const unrelatedComposer = 'function zKn(e){return e.target instanceof Node;}';
+  fs.writeFileSync(composer, unrelatedComposer);
+  assert.match(installVSCode(movedComposer, helper), /Patched VS Code extension later-layout/);
+  const manifest = JSON.parse(fs.readFileSync(path.join(movedComposer, '.temp-codex-v3.json'), 'utf8'));
+  assert.equal(manifest.files.length, 3);
+  assert.match(manifest.compatibility.profile, /-core$/);
+  assert.equal(fs.readFileSync(composer, 'utf8'), unrelatedComposer);
+  assert.match(restoreVSCode(movedComposer), /Restored/);
+  assert.equal(fs.readFileSync(composer, 'utf8'), unrelatedComposer);
+  const changed = extension(t, 'module.exports={};');
+  assert.throws(() => installVSCode(changed, helper), /layout/);
+  assert.equal(fs.readFileSync(path.join(changed, pkg.main), 'utf8'), 'module.exports={};');
+  assert(!fs.existsSync(path.join(changed, pkg.main + '.temp-codex.bak')));
   assert.throws(() => adaptVSCodeSource('module.exports={};', pkg), /layout/);
 });
 
@@ -249,6 +272,30 @@ test('restore refuses changed app files and changed backups', t => {
   installVSCode(other, helper);
   fs.writeFileSync(path.join(other, pkg.main + '.temp-codex.bak'), 'changed backup');
   assert.throws(() => restoreVSCode(other), /changed/);
+});
+
+test('CLI restore finds the patched older extension when a newer version is unpatched', t => {
+  const home = fixture(t);
+  const extensions = path.join(home, '.vscode', 'extensions');
+  const older = path.join(extensions, 'openai.chatgpt-1.0.0');
+  const newer = path.join(extensions, 'openai.chatgpt-2.0.0');
+  fs.mkdirSync(extensions, { recursive: true });
+  fs.cpSync(extension(t), older, { recursive: true });
+  fs.cpSync(extension(t), newer, { recursive: true });
+  installVSCode(older, helper);
+  fs.utimesSync(older, new Date('2020-01-01'), new Date('2020-01-01'));
+  fs.utimesSync(newer, new Date('2025-01-01'), new Date('2025-01-01'));
+
+  const env = { ...process.env, HOME: home, USERPROFILE: home };
+  const explicit = spawnSync(process.execPath, [path.join(repo, 'patch.mjs'), '--vscode', '--uninstall', '--vscode-path', newer], { encoding: 'utf8', env });
+  assert.equal(explicit.status, 1);
+  assert(fs.existsSync(path.join(older, '.temp-codex-v3.json')));
+
+  const result = spawnSync(process.execPath, [path.join(repo, 'patch.mjs'), '--vscode', '--uninstall'], { encoding: 'utf8', env });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Restored VS Code extension/);
+  assert(!fs.existsSync(path.join(older, '.temp-codex-v3.json')));
+  assert(!fs.existsSync(path.join(newer, '.temp-codex-v3.json')));
 });
 
 test('removed desktop options are rejected without modifying VS Code', t => {

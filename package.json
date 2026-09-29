@@ -1,6 +1,6 @@
 {
   "name": "codex-temporary-mode",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "private": false,
   "type": "module",
   "description": "Temporary chats and local Delta and Pipeline Mode acceleration for Codex",
@@ -47,11 +47,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sonu-mamsys/codex-temporary-mode.git"
+    "url": "git+https://github.com/sonusharma26/codex-temporary-mode.git"
   },
-  "homepage": "https://github.com/sonu-mamsys/codex-temporary-mode#readme",
+  "homepage": "https://github.com/sonusharma26/codex-temporary-mode#readme",
   "bugs": {
-    "url": "https://github.com/sonu-mamsys/codex-temporary-mode/issues"
+    "url": "https://github.com/sonusharma26/codex-temporary-mode/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",

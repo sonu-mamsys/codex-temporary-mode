@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createAcceleratorRuntime } from '../lib/accelerator/cli.mjs';
+import { selectTargetedValidation } from '../lib/accelerator/pipeline/target-selection.mjs';
 
 async function waitForCheckpoint(service, checkpointId) {
   const deadline = Date.now() + 15_000;
@@ -15,6 +16,30 @@ async function waitForCheckpoint(service, checkpointId) {
   }
   throw new Error(`Checkpoint did not finish: ${checkpointId}`);
 }
+
+test('targeted validation falls back to complete configured commands when selection limits are exceeded', async t => {
+  const command = { id: 'tests', executable: 'npx', args: ['vitest', 'run'], parser: 'vitest' };
+  const roots = [];
+  t.after(() => { for (const root of roots) fs.rmSync(root, { recursive: true, force: true }); });
+
+  const scanRoot = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'target-scan-limit-'));
+  roots.push(scanRoot);
+  for (let i = 0; i < 4_097; i++) fs.writeFileSync(path.join(scanRoot, `source-${i}.js`), '');
+  fs.writeFileSync(path.join(scanRoot, 'changed.js'), '');
+  fs.writeFileSync(path.join(scanRoot, 'changed.test.js'), '');
+  const scanResult = await selectTargetedValidation({ workspaceRoot: scanRoot, commands: [command], changedFiles: ['changed.js'] });
+  assert.deepEqual(scanResult.commands[0].args, command.args);
+  assert.equal(scanResult.impact.commands[0].fallbackReason, 'source-file-scan-limit');
+  assert.match(scanResult.impact.commands[0].fallbackImpact, /complete configured test command/);
+
+  const testsRoot = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'target-test-limit-'));
+  roots.push(testsRoot);
+  for (let i = 0; i < 65; i++) fs.writeFileSync(path.join(testsRoot, `change-${i}.test.js`), '');
+  const testsResult = await selectTargetedValidation({ workspaceRoot: testsRoot, commands: [command], changedFiles: Array.from({ length: 65 }, (_, i) => `change-${i}.test.js`) });
+  assert.deepEqual(testsResult.commands[0].args, command.args);
+  assert.equal(testsResult.impact.commands[0].fallbackReason, 'selected-test-limit');
+  assert.match(testsResult.impact.commands[0].fallbackImpact, /complete configured test command/);
+});
 
 test('Pipeline Mode validates snapshots asynchronously, retains failures, and gates the exact final workspace', async t => {
   const root = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'pipeline-service-'));

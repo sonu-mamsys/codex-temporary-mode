@@ -94,7 +94,7 @@ test('CLI preserves piped lines, resets the server for /new and reports verified
   const home = directory(t), audit = path.join(home, 'audit.jsonl');
   const result = spawnSync(process.execPath, [path.join(root, 'codex-temporary-mode.mjs'), '--codex-path', fake], {
     input: 'first\n/status\n/new\nsecond\n/exit\n', encoding: 'utf8', timeout: 10000,
-    env: { ...process.env, TEMP_CODEX_FAKE_HOME: home, TEMP_CODEX_FAKE_AUDIT: audit },
+    env: { ...process.env, CODEX_TEMPORARY_SKIP_VSCODE_REPAIR: '1', TEMP_CODEX_FAKE_HOME: home, TEMP_CODEX_FAKE_AUDIT: audit },
   });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Server-confirmed ephemeral: true/);
@@ -108,7 +108,7 @@ test('CLI preserves piped lines, resets the server for /new and reports verified
 test('verification includes a completed turn and a fresh-server absence check', t => {
   const home = directory(t);
   const result = spawnSync(process.execPath, [path.join(root, 'codex-temporary-mode.mjs'), '--codex-path', fake, '--verify', 'MARKER'], {
-    encoding: 'utf8', timeout: 10000, env: { ...process.env, TEMP_CODEX_FAKE_HOME: home },
+    encoding: 'utf8', timeout: 10000, env: { ...process.env, CODEX_TEMPORARY_SKIP_VSCODE_REPAIR: '1', TEMP_CODEX_FAKE_HOME: home },
   });
   assert.equal(result.status, 0, result.stderr); assert.match(result.stdout, /PASS:/); assert.match(result.stdout, /MARKER/);
 });

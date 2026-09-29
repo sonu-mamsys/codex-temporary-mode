@@ -1,6 +1,6 @@
 # Publishing
 
-The npm package links to [sonu-mamsys/codex-temporary-mode](https://github.com/sonu-mamsys/codex-temporary-mode). The repository, homepage and issue links are set in package.json.
+The npm package links to [sonusharma26/codex-temporary-mode](https://github.com/sonusharma26/codex-temporary-mode). The repository, homepage and issue links are set in package.json.
 
 ## Publish from your computer
 
@@ -14,7 +14,7 @@ The workflow `.github/workflows/publish.yml` is ready. To enable it:
 
 1. On npm, open **codex-temporary-mode > Settings > Trusted publishing**.
 2. Choose **GitHub Actions**.
-3. Enter owner **sonu-mamsys**, repository **codex-temporary-mode**, and workflow filename **publish.yml**. Leave environment blank.
+3. Enter owner **sonusharma26**, repository **codex-temporary-mode**, and workflow filename **publish.yml**. Leave environment blank.
 4. Save the trusted publisher configuration.
 5. For a new version, push the changes and publish a GitHub Release for that commit. You can also run **Publish to npm** manually from the Actions tab.
 

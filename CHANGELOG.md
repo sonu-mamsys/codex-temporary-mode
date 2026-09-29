@@ -1,5 +1,14 @@
 # codex-temporary-mode changelog
 
+## 3.4.0
+
+- Replaced exact VS Code version gating with fail-closed structural compatibility profiles, fingerprints, update checks and opted-in patch repair.
+- Added read-only `doctor` diagnostics plus clearer Temporary Mode and Accelerator commands.
+- Added changed-code-aware Vitest/Jest targeting for Pipeline Mode checkpoints.
+- Added exact session byte-savings statistics through `get_acceleration_stats`.
+- Supported newer Codex VS Code bundles through verified core and renderer patch points, with the status bar control when the composer hook has moved.
+- Falls back to the complete configured test command when targeted test selection reaches its scan or selection limit.
+
 ## 3.3.0
 
 - Added Delta Mode with version-aware file reads, compact command diagnostics, raw-output retrieval and context rehydration.
