@@ -70,13 +70,9 @@ Run `setup` once in each repository where you want Delta and Pipeline Mode, then
 
 If you enabled VS Code support during installation, start a new Codex chat and turn on **Temporary**.
 
-Temporary chats have a status bar toggle. On extension layouts with the verified composer hook, they also have:
+The local new-chat composer and VS Code status bar both have a **Temporary** toggle. In the current composer, the toggle sits inside the chat box, above the text input. The composer toggle clears prewarmed threads when switching modes, so the next message uses the selected mode. Existing chats keep their original mode and temporary chats show a **Temporary chat** label.
 
-* A purple chat input
-* A **Temporary chat** label
-* No saved conversation after VS Code is restarted
-
-Existing chats are not affected.
+Temporary conversations are not saved after VS Code restarts. The original composer layout also highlights the input in purple.
 
 If you skipped VS Code setup during installation, run:
 
@@ -237,7 +233,7 @@ Your normal Codex installation, saved chats, project files, and unrelated VS Cod
 * Terminal mode currently supports text chat only.
 * VS Code support currently works with local chats only.
 * Temporary-chat patching does not support cloud chats, remote connections, ChatGPT web, or ChatGPT desktop; Delta Mode uses the separate shared local MCP configuration.
-* VS Code patching checks the actual extension and renderer structure. `26.908.40401` supports the composer control; `26.917.62051` supports Temporary Mode through the status bar because its composer hook changed. Other layouts are accepted only when the required patch points match.
+* VS Code patching checks the extension, renderer and composer structure. `26.908.40401` uses the original composer control; `26.917.62051` uses the shared Codex composer across sidebar, editor-panel and empty draft views. Installation rejects layouts without a verified composer hook.
 
 ## License
 

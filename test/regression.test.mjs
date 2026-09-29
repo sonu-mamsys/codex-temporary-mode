@@ -20,7 +20,10 @@ after(() => {
   fs.rmSync(stateHome, { recursive: true, force: true });
 });
 const pkg = { publisher: 'openai', name: 'chatgpt', version: 'fixture-version', main: 'out/extension.js', contributes: { configuration: [] } };
-const hostSource = `const endpoints={"get-settings":()=>this.settings.readAll(),}; const ES='ui'; class Host {
+const hostSource = `const endpoints={"get-settings":()=>this.settings.readAll(),}; const ES=()=>{}; const UI_PROVIDER='ui';
+function webviewRegistration(){this.codexMcpConnection.registerProvider(UI_PROVIDER,{onInitialized:()=>{}});}
+function webviewDispatch(n,o,i,r){this.codexMcpConnection.sendRequest(UI_PROVIDER,String(n),o,i,r.retainResponse);this.codexMcpConnection.prewarmThreadStart(UI_PROVIDER,String(n),o,r.retainResponse);}
+class Host {
 sendProviderRequest(e,r,n,o,i,s){this.sent={id:e+':'+r,method:n,params:o};}
 routeIncomingMessage(e,r=e){const n=e.method,i=e.params?.thread,s=i?.id||e.params?.threadId;
 if(n==="thread/started"&&i!=null&&Eyt(i))return this.markEphemeralThreadId(i.id);
@@ -207,7 +210,7 @@ test('a verified v3 patch upgrades to the current patch version', t => {
   manifest.version = 3;
   fs.writeFileSync(manifestPath, JSON.stringify(manifest));
   assert.match(installVSCode(root, helper), /Reload VS Code once/);
-  assert.equal(JSON.parse(fs.readFileSync(manifestPath, 'utf8')).version, 7);
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, 'utf8')).version, 11);
   assert(!fs.existsSync(path.join(root, '.temp-codex-reload-once')));
 });
 
@@ -218,18 +221,17 @@ test('compatibility follows structure while changed layouts are rejected before 
   const composer = path.join(movedComposer, COMPOSER_PATH);
   const unrelatedComposer = 'function zKn(e){return e.target instanceof Node;}';
   fs.writeFileSync(composer, unrelatedComposer);
-  assert.match(installVSCode(movedComposer, helper), /Patched VS Code extension later-layout/);
-  const manifest = JSON.parse(fs.readFileSync(path.join(movedComposer, '.temp-codex-v3.json'), 'utf8'));
-  assert.equal(manifest.files.length, 3);
-  assert.match(manifest.compatibility.profile, /-core$/);
+  assert.throws(() => installVSCode(movedComposer, helper), /Unsupported composer bundle layout/);
   assert.equal(fs.readFileSync(composer, 'utf8'), unrelatedComposer);
-  assert.match(restoreVSCode(movedComposer), /Restored/);
-  assert.equal(fs.readFileSync(composer, 'utf8'), unrelatedComposer);
+  assert.equal(fs.readFileSync(path.join(movedComposer, pkg.main), 'utf8'), hostSource);
+  assert(!fs.existsSync(path.join(movedComposer, '.temp-codex-v3.json')));
   const changed = extension(t, 'module.exports={};');
   assert.throws(() => installVSCode(changed, helper), /layout/);
   assert.equal(fs.readFileSync(path.join(changed, pkg.main), 'utf8'), 'module.exports={};');
   assert(!fs.existsSync(path.join(changed, pkg.main + '.temp-codex.bak')));
   assert.throws(() => adaptVSCodeSource('module.exports={};', pkg), /layout/);
+  const inconsistentProvider = hostSource.replace('prewarmThreadStart(UI_PROVIDER,', 'prewarmThreadStart(ES,');
+  assert.throws(() => adaptVSCodeSource(inconsistentProvider, pkg), /layout/);
 });
 
 test('installer rolls back an interrupted write and removes only its own new files', t => {

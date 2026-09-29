@@ -6,7 +6,7 @@ import { adaptComposerSource } from '../lib/vscode-adapter.mjs';
 
 function harness(info, initial = false) {
   const slots = [], effects = [], listeners = new Map();
-  let cursor = 0, enabled = initial, fail = false, clears = 0, writes = 0;
+  let cursor = 0, enabled = initial, fail = false, clears = 0, writes = 0, clearGate, composerInert = false;
   const context = vm.createContext({ window: {
     addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name),
     setInterval: fn => { listeners.set('poll', fn); return 1; }, clearInterval: () => listeners.delete('poll'),
@@ -18,13 +18,14 @@ function harness(info, initial = false) {
     useEffect(effect) { const index = cursor++; if (!slots[index]) { slots[index] = true; effects.push(effect); } },
   };
   const deps = { React, jsx: (type, props) => ({ type, props }), Original: 'original',
-    context: () => ({ hostId: 'local', ...info, clearPrewarmed: () => { clears++; } }),
+    context: () => ({ hostId: 'local', ...info, clearPrewarmed: async () => { clears++; await clearGate; }, setComposerInert: value => { composerInert = value; } }),
     readMode: async () => ({ enabled }), writeMode: async value => { writes++; if (fail) throw Error('write failed'); enabled = value; return { enabled }; },
   };
   return {
     render() { cursor = 0; return context.tempCodexComposer({ children: 'input' }, deps); },
     async mount() { this.render(); this.cleanup = effects[0](); await new Promise(resolve => setImmediate(resolve)); },
     setFail(value) { fail = value; }, setEnabled(value) { enabled = value; },
+    setClearGate(value) { clearGate = value; }, get composerInert() { return composerInert; },
     get clears() { return clears; }, get writes() { return writes; }, listeners, deps,
   };
 }
@@ -40,9 +41,15 @@ test('new-chat switch waits for confirmation, clears prewarms, and highlights co
   assert.equal(find(h.render(), 'button').props.disabled, true);
   await h.mount();
   assert.equal(find(h.render(), 'button').props['aria-checked'], false);
+  let releaseClear;
+  h.setClearGate(new Promise(resolve => { releaseClear = resolve; }));
   const pending = find(h.render(), 'button').props.onClick();
   assert.equal(find(h.render(), 'original').props.inert, true);
+  assert.equal(h.composerInert, true);
+  assert.equal(h.writes, 0, 'Changing mode must wait for existing prewarms to be cleared');
+  releaseClear();
   await pending;
+  assert.equal(h.composerInert, false);
   const tree = h.render();
   assert.equal(tree.props['data-temp-codex-active'], 'true');
   assert.equal(find(tree, 'button').props.role, 'switch');
@@ -86,7 +93,8 @@ test('cloud and remote composers retain original rendering', async () => {
 });
 
 test('composer adapter rejects duplicate injection and unknown layouts', () => {
-  const patched = adaptComposerSource('function zKn(e){return e;}');
+  const source = 'function bindings(){const O$={},composer=il(Dm).value,scope=il($),{hostId}=Th(FHe());return k$.jsx||NC(scope,composer.conversationId)||scope.get(GC)||xm(hostId);}function zKn(e){return e;}';
+  const patched = adaptComposerSource(source);
   new vm.Script(patched);
   assert.throws(() => adaptComposerSource(patched), /Unsupported/);
   assert.throws(() => adaptComposerSource('function changed(e){return e;}'), /Unsupported/);

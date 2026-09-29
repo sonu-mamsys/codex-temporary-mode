@@ -1,5 +1,11 @@
 # codex-temporary-mode changelog
 
+## Unreleased
+
+- Fixed newer VS Code extensions silently bypassing temporary storage when the minified webview-provider identifier changed.
+- Placed the Temporary switch inside the shared Codex chat box above the input, including empty draft chats, and removed the incomplete page-level patches and separate toggle border.
+- Clear pending and cached prewarmed threads when switching modes, and reject installation when no supported composer is found.
+
 ## 3.4.0
 
 - Replaced exact VS Code version gating with fail-closed structural compatibility profiles, fingerprints, update checks and opted-in patch repair.
