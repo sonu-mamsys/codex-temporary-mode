@@ -1,6 +1,6 @@
 {
   "name": "codex-temporary-mode",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "private": false,
   "type": "module",
   "description": "Temporary chats and local Delta and Pipeline Mode acceleration for Codex",

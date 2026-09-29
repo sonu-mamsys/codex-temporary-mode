@@ -1,6 +1,6 @@
 # codex-temporary-mode changelog
 
-## Unreleased
+## 3.4.1
 
 - Fixed newer VS Code extensions silently bypassing temporary storage when the minified webview-provider identifier changed.
 - Placed the Temporary switch inside the shared Codex chat box above the input, including empty draft chats, and removed the incomplete page-level patches and separate toggle border.
