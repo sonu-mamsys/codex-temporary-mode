@@ -1,5 +1,5 @@
 // Injected into the supported renderer; all host dependencies are passed explicitly.
-function tempCodexComposer(props, { React, jsx, Original, context, readMode, writeMode }) {
+function tempCodexComposer(props, { React, jsx, Original, context, readMode, writeMode, embedded = false }) {
   const info = context();
   const [mode, setMode] = React.useState(null);
   const [busy, setBusy] = React.useState(false);
@@ -33,13 +33,15 @@ function tempCodexComposer(props, { React, jsx, Original, context, readMode, wri
     setBusy(true);
     setError('');
     try {
-      info.clearPrewarmed();
+      info.setComposerInert?.(true);
+      await info.clearPrewarmed();
       const result = await writeMode(!mode);
-      info.clearPrewarmed();
+      await info.clearPrewarmed();
       if (mounted.current) setMode(result.enabled === true);
     } catch {
       if (mounted.current) setError('Could not change temporary mode. Please try again.');
     } finally {
+      info.setComposerInert?.(false);
       changing.current = false;
       if (mounted.current) setBusy(false);
     }
@@ -55,7 +57,7 @@ function tempCodexComposer(props, { React, jsx, Original, context, readMode, wri
   const row = control && jsx('div', { style: { display: 'flex', padding: '8px 12px 2px', fontSize: 12, color: 'var(--vscode-foreground, inherit)' }, children: control });
   return jsx('div', {
     'data-temp-codex-active': active ? 'true' : 'false',
-    style: { borderRadius: 20, background: active ? 'rgba(139,92,246,0.10)' : undefined, boxShadow: active ? '0 0 0 1px rgba(139,92,246,0.45)' : undefined },
+    style: embedded ? { flexShrink: 0 } : { borderRadius: 20, background: active ? 'rgba(139,92,246,0.10)' : undefined, boxShadow: active ? '0 0 0 1px rgba(139,92,246,0.45)' : undefined },
     children: [jsx('style', { children: '[data-temp-codex-active="true"] [data-composer-surface-variant]{background:rgba(139,92,246,0.09)!important} [data-temp-codex-active] button:focus-visible{outline:2px solid var(--vscode-focusBorder,#a78bfa);outline-offset:3px}' }),
       jsx(Original, { ...props, inert: props.inert || busy, children: [row, error && jsx('div', { role: 'alert', style: { padding: '4px 12px', fontSize: 12 }, children: error }), props.children] })]
   });
