@@ -210,7 +210,7 @@ test('a verified v3 patch upgrades to the current patch version', t => {
   manifest.version = 3;
   fs.writeFileSync(manifestPath, JSON.stringify(manifest));
   assert.match(installVSCode(root, helper), /Reload VS Code once/);
-  assert.equal(JSON.parse(fs.readFileSync(manifestPath, 'utf8')).version, 11);
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, 'utf8')).version, 12);
   assert(!fs.existsSync(path.join(root, '.temp-codex-reload-once')));
 });
 

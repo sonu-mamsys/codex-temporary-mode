@@ -13,10 +13,11 @@ codex-temporary-mode setup --all
 codex-temporary-mode doctor
 ```
 
-`setup --all` installs the VS Code Temporary Mode patch and configures the current Git project's optional MCP accelerator. It changes only the detected local extension and the project's `.codex/` files. `setup` without `--all` remains the existing combined-command alias. `doctor` is read-only and reports exactly what was found.
+`setup --all` installs the bundled VS Code companion, applies the compatible Temporary Mode patch, and configures the current Git project's optional MCP accelerator. It changes the local VS Code extensions and the project's `.codex/` files. `setup` without `--all` remains the existing combined-command alias. `doctor` is read-only and reports exactly what was found.
 
 Want just one feature instead?
 
+* **Keep VS Code controls through Codex updates:** `codex-temporary-mode companion install`
 * **Do not save a local VS Code Codex conversation:** `codex-temporary-mode temporary install`
 * **Use temporary chats in the terminal:** run `codex-temporary-mode`
 * **Reduce repeated file/context output and run checkpoints:** `codex-temporary-mode accelerator setup`
@@ -56,7 +57,9 @@ cd /path/to/your/repository
 codex-temporary-mode setup --all
 ```
 
-`setup --all` performs the three local steps:
+`setup --all` performs these local steps:
+
+* Installs or updates the bundled Codex Temporary Companion in VS Code.
 
 * Enables Temporary Mode in the installed VS Code Codex extension.
 * Adds the Delta and Pipeline MCP server to the trusted project's `.codex/config.toml`.
@@ -82,7 +85,7 @@ codex-temporary-mode temporary install
 
 Then reload VS Code once.
 
-After an explicit install, terminal startup performs a lightweight compatibility check. If a Codex extension update removed the patch and the new bundle still matches a known structural profile, the patch is restored automatically. Incompatible layouts are left untouched and reported by `doctor`; no background daemon is installed.
+After an explicit install, launching a temporary terminal chat with `codex-temporary-mode` performs a lightweight compatibility check. Opening VS Code alone does not run this npm repair check. If a Codex extension update removed the patch and the new bundle still matches a known structural profile, the patch is restored automatically. Incompatible layouts are left untouched and reported by `doctor`; no background daemon is installed.
 
 You can also inspect or retry the patch directly:
 
@@ -92,6 +95,25 @@ codex-temporary-mode temporary reapply
 ```
 
 If you change Temporary Mode from the status bar or Command Palette, reload VS Code before starting the next chat.
+
+### Keep controls available through Codex updates
+
+Codex updates replace the extension files modified by Temporary Mode. The optional **Codex Temporary Companion** installs separately, keeping its commands and status control available when Codex updates. It checks the active Codex extension at startup and on extension changes, repairs compatible bundles after a previous explicit patch installation, and offers a temporary terminal chat when the embedded UI is unsupported.
+
+The companion VSIX is included in the npm package. `setup --all` installs it automatically. Install or update just the companion without changing project configuration:
+
+```sh
+npm i -g codex-temporary-mode@latest
+codex-temporary-mode companion install
+```
+
+The installer uses VS Code on PATH or its standard local installation. Use `--code-path <absolute CLI path>` for another installation and `--profile <name>` for a named profile; these options also work with `setup`. If VS Code CLI is unavailable, the installer prints the bundled VSIX path for **Extensions: Install from VSIX...**. The same versioned VSIX is attached to [GitHub releases](https://github.com/sonusharma26/codex-temporary-mode/releases).
+
+After a new npm release, rerun `companion install` to update the companion. This release is distributed through npm/VSIX, not the VS Code Marketplace. Codex updates do not remove the companion; substantial internal Codex changes may still require a companion update.
+
+Reload VS Code, then use **Temporary Chat: Open Controls**. A first-time patch installation uses **Temporary Chat: Repair Embedded Toggle**. A successful repair requires another reload to load the changed Codex files. The adapter has been source-validated against Codex `26.930.51102`.
+
+**The companion survives replacement of Codex's files; the embedded patch cannot guarantee support for every future internal layout.** Unsupported layouts leave the patch unapplied and the terminal option available. The terminal client requires Node.js 22.13+, Codex CLI on PATH, and an existing login; it uses a read-only sandbox by default and still depends on the Codex app-server protocol. See [companion setup and limitations](companion/README.md).
 
 ## Terminal
 
@@ -223,6 +245,8 @@ This:
 
 Then reload VS Code once.
 
+Uninstall **Codex Temporary Companion** separately in VS Code's Extensions view to remove its controls and update checks. Restoring the embedded patch clears its automatic-repair opt-in.
+
 Your normal Codex installation, saved chats, project files, and unrelated VS Code settings are not removed.
 
 ## Limitations
@@ -233,7 +257,7 @@ Your normal Codex installation, saved chats, project files, and unrelated VS Cod
 * Terminal mode currently supports text chat only.
 * VS Code support currently works with local chats only.
 * Temporary-chat patching does not support cloud chats, remote connections, ChatGPT web, or ChatGPT desktop; Delta Mode uses the separate shared local MCP configuration.
-* VS Code patching checks the extension, renderer and composer structure. `26.908.40401` uses the original composer control; `26.917.62051` uses the shared Codex composer across sidebar, editor-panel and empty draft views. Installation rejects layouts without a verified composer hook.
+* VS Code patching checks the extension, renderer and composer structure. `26.908.40401` uses the original composer control; `26.917.62051` and `26.930.51102` use the shared Codex composer across sidebar, editor-panel and empty draft views. Installation rejects layouts without a verified composer hook.
 
 ## License
 

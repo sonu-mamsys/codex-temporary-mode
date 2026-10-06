@@ -1,27 +1,12 @@
-# Publishing
+# Releasing codex-temporary-mode
 
-The npm package links to [sonusharma26/codex-temporary-mode](https://github.com/sonusharma26/codex-temporary-mode). The repository, homepage and issue links are set in package.json.
+The npm package contains the CLI and `build/companion.vsix`. VS Code installs the companion separately through `codex-temporary-mode companion install` or `setup --all`. The identical versioned VSIX is attached to the GitHub release. Marketplace publication is a separate, optional distribution channel.
 
-## Publish from your computer
+1. Update `package.json`, the root versions in `package-lock.json`, `lib/app-server.mjs`, and `CHANGELOG.md`. Update `companion/package.json` and its README when the companion changes.
+2. Run `npm ci --ignore-scripts`, `npm test`, and `npm run test:build`. The build generates minified CLI files, a minified companion VSIX in `dist/`, and the identical `build/companion.vsix`.
+3. Inspect `npm pack --dry-run --ignore-scripts` for the companion asset and intended runtime files.
+4. Commit the reviewed release and push its matching `v<package-version>` tag. Keep unrelated local changes out of the release.
+5. The `Publish to npm` GitHub workflow validates the tag, runs the release gates, publishes through npm trusted publishing/OIDC, and creates a GitHub release with the VSIX. It needs no npm token. Manual dispatch must select the matching version tag.
+6. Verify the public npm version and GitHub release asset. Allow for registry propagation before retrying; published npm versions cannot be overwritten.
 
-Run `npm ci`, then `npm publish --access public`. The publish command tests source and built code, rebuilds the release, and publishes only the build, README, license and package metadata. Complete npm's authentication prompt if requested.
-
-Use a new version for each release. Update package.json, package-lock.json and the client version in lib/app-server.mjs together.
-
-## Publish directly from GitHub
-
-The workflow `.github/workflows/publish.yml` is ready. To enable it:
-
-1. On npm, open **codex-temporary-mode > Settings > Trusted publishing**.
-2. Choose **GitHub Actions**.
-3. Enter owner **sonusharma26**, repository **codex-temporary-mode**, and workflow filename **publish.yml**. Leave environment blank.
-4. Save the trusted publisher configuration.
-5. For a new version, push the changes and publish a GitHub Release for that commit. You can also run **Publish to npm** manually from the Actions tab.
-
-This uses GitHub's identity instead of storing an npm token. Configure trust before running the workflow. Do not run it for a version already published locally.
-
-See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) for account setup and requirements.
-
-## Uninstall
-
-Users run `codex-temporary-mode uninstall`. Source checkouts also offer `bash uninstall.sh` and `uninstall.ps1`. The command cleans detected extensions and settings first, then removes the package from the active global npm prefix. Custom locations can be supplied with `--vscode-path` and `--settings-path`. It does not search every folder or remove other npm installations, saved chats or project files.
+Users update with `npm i -g codex-temporary-mode@latest`, run `codex-temporary-mode companion install`, then reload VS Code. Updating npm alone does not update an installed VS Code extension. Compatible Codex upgrades are repaired after an explicit patch opt-in; unknown layouts need an updated adapter or the terminal fallback.

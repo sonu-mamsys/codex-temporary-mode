@@ -4,15 +4,16 @@ on:
   push:
     tags:
       - 'v*'
-  release:
-    types: [published]
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -21,8 +22,26 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
       - name: Verify release tag matches package version
-        if: startsWith(github.ref, 'refs/tags/')
-        run: node -e "const version=require('./package.json').version; if(process.env.GITHUB_REF_NAME !== 'v'+version){console.error('Tag '+process.env.GITHUB_REF_NAME+' does not match package v'+version);process.exit(1)}"
+        run: node -e "const version=require('./package.json').version; if(process.env.GITHUB_REF !== 'refs/tags/v'+version){console.error('Run this workflow on the matching v'+version+' tag.');process.exit(1)}"
       - run: npm install --global npm@latest
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npm publish --access public
+      - run: npm test
+      - run: npm run test:build
+      - run: npm pack --ignore-scripts
+      - name: Publish verified npm archive
+        run: npm publish "codex-temporary-mode-$(node -p 'require("./package.json").version').tgz" --ignore-scripts --access public
+      - name: Create GitHub release with bundled companion
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const text = fs.readFileSync('CHANGELOG.md', 'utf8');
+          const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
+          const section = text.split('## ' + version + '\n')[1]?.split('\n## ')[0];
+          if (!section) throw new Error('Release notes are missing.');
+          fs.writeFileSync('release-notes.md', section.trim() + '\n\nInstall: `npm i -g codex-temporary-mode@' + version + '`, then `codex-temporary-mode companion install` and reload VS Code.\n');
+          NODE
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md
+          companion_version=$(node -p 'require("./companion/package.json").version')
+          gh release upload "$GITHUB_REF_NAME" "dist/codex-temporary-companion-$companion_version.vsix"

@@ -1,6 +1,6 @@
 {
   "name": "codex-temporary-mode",
-  "version": "3.4.1",
+  "version": "3.5.0",
   "private": false,
   "type": "module",
   "description": "Temporary chats and local Delta and Pipeline Mode acceleration for Codex",
@@ -11,7 +11,8 @@
     "restore:vscode": "node patch.mjs --uninstall --vscode",
     "pack:check": "npm pack --dry-run",
     "prepublishOnly": "npm test && npm run test:build",
-    "build": "node scripts/build.mjs",
+    "build": "node scripts/build.mjs && node scripts/package-companion.mjs",
+    "package:companion": "node scripts/package-companion.mjs",
     "prepack": "npm run build",
     "test:build": "npm run build && node scripts/verify-build.mjs"
   },
@@ -27,7 +28,8 @@
   "files": [
     "build/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "companion/README.md"
   ],
   "keywords": [
     "codex",

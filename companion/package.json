@@ -1,0 +1,37 @@
+{
+  "name": "codex-temporary-companion",
+  "displayName": "Codex Temporary Companion",
+  "description": "Persistent Temporary Chat controls, compatible Codex patch repair, and a temporary terminal client.",
+  "version": "0.1.1",
+  "publisher": "sonusharma26",
+  "license": "MIT",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Other"],
+  "main": "./companion/extension.cjs",
+  "extensionKind": ["ui"],
+  "activationEvents": ["onStartupFinished"],
+  "capabilities": { "untrustedWorkspaces": { "supported": false }, "virtualWorkspaces": false },
+  "contributes": {
+    "commands": [
+      { "command": "temporaryCompanion.menu", "title": "Temporary Chat: Open Controls" },
+      { "command": "temporaryCompanion.check", "title": "Temporary Chat: Check Codex Compatibility" },
+      { "command": "temporaryCompanion.repair", "title": "Temporary Chat: Repair Embedded Toggle" },
+      { "command": "temporaryCompanion.restore", "title": "Temporary Chat: Restore Original Codex Files" },
+      { "command": "temporaryCompanion.toggle", "title": "Temporary Chat: Toggle Embedded Mode" },
+      { "command": "temporaryCompanion.terminal", "title": "Temporary Chat: Start Terminal Chat" }
+    ],
+    "configuration": {
+      "title": "Codex Temporary Companion",
+      "properties": {
+        "temporaryCompanion.autoRepair": {
+          "type": "boolean", "default": true, "scope": "application",
+          "description": "Repair compatible Codex updates after a previous explicit patch installation. Unknown layouts are left untouched. Reload VS Code after a repair."
+        },
+        "temporaryCompanion.nodePath": {
+          "type": "string", "default": "", "scope": "machine",
+          "description": "Optional absolute path to Node.js 22.13 or newer for the bundled temporary terminal client. Otherwise use Node.js from PATH."
+        }
+      }
+    }
+  }
+}

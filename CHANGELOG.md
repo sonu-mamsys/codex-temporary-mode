@@ -1,5 +1,12 @@
 # codex-temporary-mode changelog
 
+## 3.5.0
+
+- Bundle Codex Temporary Companion 0.1.1 in npm and as a GitHub release VSIX.
+- Install or update the companion with `companion install` or `setup --all`.
+- Keep independent VS Code controls through Codex updates, repair compatible bundles after opt-in, and offer temporary terminal chat when an embedded layout is unsupported.
+- Support Codex VS Code 26.930.51102 and safely upgrade older patch manifests after validating backups and compatibility.
+
 ## 3.4.1
 
 - Fixed newer VS Code extensions silently bypassing temporary storage when the minified webview-provider identifier changed.

@@ -114,6 +114,8 @@ test('real extension adapters discover the current profile and parse selected so
   assert.equal(connection.lastSent.params, internal);
   const renderer = installed.compatibility.renderer;
   const patchedRenderer = adaptRendererSource(renderer.source, installed.compatibility.profile);
+  const rendererCheck = spawnSync(process.execPath, ['--input-type=module', '--check'], { input: patchedRenderer, encoding: 'utf8' });
+  assert.equal(rendererCheck.status, 0, rendererCheck.stderr);
 
   const composer = installed.compatibility.composer;
   if (composer) {
@@ -121,8 +123,11 @@ test('real extension adapters discover the current profile and parse selected so
     const checked = spawnSync(process.execPath, ['--input-type=module', '--check'], { input: patchedComposer, encoding: 'utf8' });
     assert.equal(checked.status, 0, checked.stderr);
     if (installed.compatibility.profile.id.endsWith('-shared-composer')) {
-      assert.ok(patchedComposer.includes('layout:qc,children:[(0,X5.jsx)(tempCodexNativeComposerControl,{reservation:ce}),pee]'), 'Switch must be inside the native composer body before the input');
-      assert.ok(patchedComposer.includes('"data-codex-composer-root":``,"data-composer-placement":De.kind,children:[nn,gn]'), 'Outer composer must retain its original children');
+      const runtime = installed.compatibility.profile.composerRuntime;
+      const body = runtime ? `children:[(0,${runtime.jsx}.jsx)(tempCodexNativeComposerControl,{reservation:${runtime.reservation}}),${runtime.children}]` : 'layout:qc,children:[(0,X5.jsx)(tempCodexNativeComposerControl,{reservation:ce}),pee]';
+      assert.ok(patchedComposer.includes(body), 'Switch must be inside the native composer body before the input');
+      const outer = composer.source.match(/"data-codex-composer-root":``,"data-composer-placement":[A-Za-z$_][\w$]*\.kind,children:\[[A-Za-z$_][\w$]*,[A-Za-z$_][\w$]*\]/)?.[0];
+      assert.ok(outer && patchedComposer.includes(outer), 'Outer composer must retain its original children');
       const nativeStart = patchedComposer.indexOf('function tempCodexNativeComposerControl({reservation}){');
       const nativeEnd = patchedComposer.indexOf('\n}\n', nativeStart) + 2;
       assert.ok(nativeStart > 0 && nativeEnd > nativeStart, 'Shared Codex composer must contain its injected control');
@@ -162,6 +167,8 @@ test('real extension adapters discover the current profile and parse selected so
       const ui = vm.createContext({
         ma: () => ({ value: composerValue }), rf: {}, qf: composer => composer.value.conversationId,
         kl: () => hostId, pA: {}, eH: () => manager, Z5: hooks, Q5: { jsx },
+        Wl: () => ({ value: composerValue }), lg: {}, c_: composer => composer.value.conversationId,
+        Qd: () => hostId, Nj: {}, bY: () => manager, n9: hooks, r9: { jsx },
         window: { addEventListener() {}, removeEventListener() {}, setInterval() { return 1; }, clearInterval() {} },
         Eg: async (name, payload) => {
           rpcCalls.push({ name, payload, inert: nativeRoot.inert });
@@ -169,6 +176,7 @@ test('real extension adapters discover the current profile and parse selected so
           return { enabled: name === 'temp-codex-set-mode' ? payload.params.enabled : false };
         },
       });
+      ui.qp = ui.Eg;
       vm.runInContext(`${injectedControl}\nthis.render=reservation=>tempCodexNativeComposerControl({reservation});`, ui);
       const render = async () => {
         hookIndex = 0;
@@ -242,9 +250,9 @@ test('real extension profile installs and restores only a disposable copy', { sk
 test('real renderer storage-mode adapter is selected dynamically and preserves temporary storage semantics', { skip: !reviewRoot }, () => {
   const installed = loadInstalledExtension();
   const patched = adaptRendererSource(installed.compatibility.renderer.source, installed.compatibility.profile);
-  const mapping = patched.match(/ephemeral:v\.thread\.ephemeral===!0\|\|d\.ephemeral,sideConversation:d\.ephemeral/);
+  const mapping = patched.match(/ephemeral:([A-Za-z$_][\w$]*)\.thread\.ephemeral===!0\|\|([A-Za-z$_][\w$]*)\.ephemeral,sideConversation:\2\.ephemeral/);
   assert.ok(mapping, 'Selected renderer must preserve server-confirmed ephemeral storage without forcing a side conversation.');
-  const create = new Function('v', 'd', `return {${mapping[0]}}`);
+  const create = new Function(mapping[1], mapping[2], `return {${mapping[0]}}`);
   const temporary = create({ thread: { ephemeral: true } }, { ephemeral: false });
   const normal = create({ thread: { ephemeral: false } }, { ephemeral: false });
   assert.equal(temporary.ephemeral, true);
